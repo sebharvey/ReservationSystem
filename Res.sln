@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6B88E081-FAC0-4508-87ED-810E0C3AF798}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Application", "Res.Application\Res.Application.csproj", "{71A2E48B-3F58-4FCC-B35A-128B7591F957}"
