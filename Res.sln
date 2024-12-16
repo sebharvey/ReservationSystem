@@ -1,0 +1,85 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Tests", "Res.Tests\Res.Tests.csproj", "{31D6048F-5C69-4B04-86E1-4A51385743A7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6B88E081-FAC0-4508-87ED-810E0C3AF798}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Application", "Res.Application\Res.Application.csproj", "{71A2E48B-3F58-4FCC-B35A-128B7591F957}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Console", "Res.Console\Res.Console.csproj", "{9B9317FB-7343-4DFC-816B-BD2043393E4D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Core", "Res.Core\Res.Core.csproj", "{194C27E6-C890-4714-B0F5-A87A2CD826F7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Infrastructure", "Res.Infrastructure\Res.Infrastructure.csproj", "{9634486D-EB92-402A-90A5-10ACB1E60B1A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Domain", "Res.Domain\Res.Domain.csproj", "{18C52D24-FC38-4422-923D-94307B4C8B91}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Tests.Data", "Res.Tests.Data\Res.Tests.Data.csproj", "{72572E07-8416-47D3-A589-EA8E3C443152}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Api", "Res.Api\Res.Api.csproj", "{13530985-2F38-43A4-839F-EE1BD3A5B3E5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Website", "Website", "{20800366-54FC-4083-8A28-963BE43D375C}"
+	ProjectSection(SolutionItems) = preProject
+		Website\Bookflow.html = Website\Bookflow.html
+		Website\Booking.html = Website\Booking.html
+		Website\CheckIn.html = Website\CheckIn.html
+		Website\Details.html = Website\Details.html
+		Website\Header.html = Website\Header.html
+		Website\Order.html = Website\Order.html
+		Website\Seats.html = Website\Seats.html
+		Website\Status.html = Website\Status.html
+		Website\Terminal.html = Website\Terminal.html
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{31D6048F-5C69-4B04-86E1-4A51385743A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31D6048F-5C69-4B04-86E1-4A51385743A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31D6048F-5C69-4B04-86E1-4A51385743A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31D6048F-5C69-4B04-86E1-4A51385743A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71A2E48B-3F58-4FCC-B35A-128B7591F957}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71A2E48B-3F58-4FCC-B35A-128B7591F957}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71A2E48B-3F58-4FCC-B35A-128B7591F957}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71A2E48B-3F58-4FCC-B35A-128B7591F957}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B9317FB-7343-4DFC-816B-BD2043393E4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B9317FB-7343-4DFC-816B-BD2043393E4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B9317FB-7343-4DFC-816B-BD2043393E4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B9317FB-7343-4DFC-816B-BD2043393E4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{194C27E6-C890-4714-B0F5-A87A2CD826F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{194C27E6-C890-4714-B0F5-A87A2CD826F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{194C27E6-C890-4714-B0F5-A87A2CD826F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{194C27E6-C890-4714-B0F5-A87A2CD826F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9634486D-EB92-402A-90A5-10ACB1E60B1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9634486D-EB92-402A-90A5-10ACB1E60B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9634486D-EB92-402A-90A5-10ACB1E60B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9634486D-EB92-402A-90A5-10ACB1E60B1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18C52D24-FC38-4422-923D-94307B4C8B91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18C52D24-FC38-4422-923D-94307B4C8B91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18C52D24-FC38-4422-923D-94307B4C8B91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18C52D24-FC38-4422-923D-94307B4C8B91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72572E07-8416-47D3-A589-EA8E3C443152}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72572E07-8416-47D3-A589-EA8E3C443152}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72572E07-8416-47D3-A589-EA8E3C443152}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72572E07-8416-47D3-A589-EA8E3C443152}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2D143A7A-F3E5-46D3-B7A5-9AAAF4733EA6}
+	EndGlobalSection
+EndGlobal

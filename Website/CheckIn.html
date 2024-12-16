@@ -1,0 +1,830 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Online Check-in</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .check-in-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            max-width: 500px;
+            margin: 40px auto;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+            text-transform: uppercase;
+        }
+
+        button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+            button:hover {
+                background: #b31329;
+            }
+
+            button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .error {
+            color: #e31837;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .step {
+            display: none;
+        }
+
+            .step.active {
+                display: block;
+            }
+
+        .centered-heading {
+            text-align: center;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .passenger-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+            .passenger-card h3 {
+                margin-top: 0;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #eee;
+            }
+
+        .passenger-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .apis-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: start;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+            .checkbox-group input[type="checkbox"] {
+                width: auto;
+                margin-top: 4px;
+            }
+
+        .boarding-pass {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .boarding-pass-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .boarding-pass-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .back-button {
+            background: #666;
+            margin-right: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .readonly-field {
+            background: #f5f5f5;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .readonly-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .boarding-pass-field {
+            margin-bottom: 10px;
+        }
+
+            .boarding-pass-field strong {
+                display: block;
+                margin-bottom: 5px;
+            }
+
+        .print-button {
+            background: #666;
+            margin: 20px auto;
+            max-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #boardingPassSection, #boardingPassSection * {
+                visibility: visible;
+            }
+
+            #boardingPassSection {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+
+            .print-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+
+    <h2 class="centered-heading">Online Check-in</h2>
+
+    <div id="loading" class="loading">Processing your request...</div>
+
+    <!-- Step 1: Initial Check-in Form -->
+    <div id="step1" class="step active check-in-form">
+        <div class="form-group">
+            <label for="recordLocator">Booking Reference (6 letters/numbers)</label>
+            <input type="text" id="recordLocator" maxlength="6" required>
+        </div>
+        <div class="form-group">
+            <label for="from">Departure airport</label>
+            <input type="text" id="from" required>
+        </div>
+        <button onclick="validateCheckin()">Continue</button>
+        <div id="error" class="error"></div>
+    </div>
+
+    <!-- Step 2: Passenger Information -->
+    <div id="step2" class="step check-in-form">
+        <h3>Passenger Information</h3>
+        <div id="passengerForms"></div>
+        <div class="button-container">
+            <button class="back-button" onclick="goToStep(1)">Back</button>
+            <button onclick="goToStep(3)">Continue</button>
+        </div>
+        <div class="error"></div>
+    </div>
+
+    <!-- Step 3: APIS Information -->
+    <div id="step3" class="step check-in-form apis-form">
+        <h3>Address Information</h3>
+        <div class="form-group">
+            <label for="street">Street Address</label>
+            <input type="text" id="street" required>
+        </div>
+        <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city" required>
+        </div>
+        <div class="form-group">
+            <label for="state">State/Province</label>
+            <input type="text" id="state" required>
+        </div>
+        <div class="form-group">
+            <label for="postal">Postal Code</label>
+            <input type="text" id="postal" required>
+        </div>
+        <div class="form-group">
+            <label for="country">Country</label>
+            <select id="country" required>
+                <option value="">Select country...</option>
+                <option value="GBR">United Kingdom (GBR)</option>
+                <option value="USA">United States (USA)</option>
+            </select>
+        </div>
+        <div class="button-container">
+            <button class="back-button" onclick="goToStep(2)">Back</button>
+            <button onclick="goToStep(4)">Continue</button>
+        </div>
+        <div class="error"></div>
+    </div>
+
+    <!-- Step 4: Baggage -->
+    <div id="step4" class="step check-in-form">
+        <h3>Add Baggage</h3>
+        <p>Baggage addition functionality coming soon.</p>
+        <div class="button-container">
+            <button class="back-button" onclick="goToStep(3)">Back</button>
+            <button onclick="goToStep(5)">Continue</button>
+        </div>
+        <div class="error"></div>
+    </div>
+
+    <!-- Step 5: Dangerous Goods -->
+    <div id="step5" class="step check-in-form">
+        <h3>Dangerous Goods Declaration</h3>
+        <div class="warning-box">
+            <p>
+                For safety reasons, dangerous goods must not be packed in checked or carry-on baggage.
+                Prohibited items include explosives, compressed gases, flammable liquids and solids,
+                oxidizing materials, poisons, infectious substances, radioactive materials, and corrosives.
+            </p>
+        </div>
+        <div class="checkbox-group">
+            <input type="checkbox" id="dangerousGoodsAgreement">
+            <label for="dangerousGoodsAgreement">
+                I confirm that my baggage does not contain any dangerous goods or prohibited items.
+            </label>
+        </div>
+        <div class="button-container">
+            <button class="back-button" onclick="goToStep(4)">Back</button>
+            <button onclick="goToStep(6)" id="dangerousGoodsButton" disabled>Continue</button>
+        </div>
+        <div class="error"></div>
+    </div>
+
+    <!-- Step 6: Review and Check-in -->
+    <div id="step6" class="step check-in-form">
+        <h3>Review and Check-in</h3>
+        <div id="reviewDetails"></div>
+        <div id="reviewPassengerDetails"></div>
+        <div id="reviewApisDetails"></div>
+        <div class="button-container">
+            <button class="back-button" onclick="goToStep(5)">Back</button>
+            <button onclick="performCheckin()">Complete Check-in</button>
+        </div>
+        <div class="error"></div>
+    </div>
+
+    <!-- Step 7: Boarding Passes -->
+    <div id="step7" class="step">
+        <h3 class="centered-heading">Your Boarding Passes</h3>
+        <button class="print-button" onclick="window.print()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9V2h12v7"></path>
+                <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"></path>
+                <path d="M6 14h12v8H6z"></path>
+            </svg>
+            Print Boarding Passes
+        </button>
+        <div id="boardingPassSection"></div>
+    </div>
+
+    <script>
+
+        // Global state
+        let bookingData = null;
+        let passengerInfo = [];
+        let apisInfo = {
+            type: 'R',
+            country: '',
+            street: '',
+            city: '',
+            state: '',
+            postal: ''
+        };
+
+        // Utility functions
+        function showError(step, message) {
+            const errorDiv = document.querySelector(`#step${step} .error`);
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function hideError(step) {
+            const errorDiv = document.querySelector(`#step${step} .error`);
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        }
+
+        function showLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'block';
+            }
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        }
+
+        function goToStep(step) {
+            console.log('Going to step:', step);
+
+            // Hide all steps
+            document.querySelectorAll('.step').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Show the requested step
+            const nextStep = document.getElementById(`step${step}`);
+            if (nextStep) {
+                nextStep.classList.add('active');
+
+                // If going to review step, render the review details
+                if (step === 6) {
+                    renderReviewDetails();
+                }
+
+                console.log(`Step ${step} activated`);
+            } else {
+                console.error(`Step ${step} element not found`);
+            }
+        }
+
+        // Format date helper functions
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatDateForDisplay(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Step 1: Validate Check-in
+        async function validateCheckin() {
+            const recordLocator = document.getElementById('recordLocator')?.value.toUpperCase();
+            const from = document.getElementById('from')?.value.toUpperCase();
+
+            if (!recordLocator || !from) {
+                showError(1, 'Please enter both booking reference and departure airport');
+                return;
+            }
+
+            if (recordLocator.length !== 6) {
+                showError(1, 'Booking reference must be 6 characters');
+                return;
+            }
+
+            hideError(1);
+            showLoading();
+
+            try {
+                const response = await fetch('http://localhost:7009/api/checkin/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordLocator,
+                        from: from
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (!data.success) {
+                    showError(1, data.message || 'Validation failed');
+                    hideLoading();
+                    return;
+                }
+
+                bookingData = data;
+                console.log('Booking data set:', bookingData);
+
+                initializePassengerInfo(data.passengers);
+                console.log('Passenger info initialized:', passengerInfo);
+
+                renderPassengerForms();
+                hideLoading();
+                goToStep(2);
+
+            } catch (error) {
+                console.error('Validation error:', error);
+                hideLoading();
+                showError(1, 'Unable to validate check-in. Please try again.');
+            }
+        }
+
+        // Step 2: Initialize and render passenger forms
+        function initializePassengerInfo(passengers) {
+            if (!Array.isArray(passengers)) {
+                console.error('Invalid passengers data:', passengers);
+                return;
+            }
+
+            passengerInfo = passengers.map(p => ({
+                passengerId: p.passengerId,
+                docType: 'P',
+                issuingCountry: '',
+                docNumber: '',
+                nationality: '',
+                dob: '',
+                gender: '',
+                expiryDate: '',
+                passenger: p
+            }));
+        }
+
+        function renderPassengerForms() {
+            const container = document.getElementById('passengerForms');
+            if (!container) {
+                console.error('Passenger forms container not found');
+                return;
+            }
+
+            console.log('Rendering passenger forms for:', passengerInfo);
+
+            if (!Array.isArray(passengerInfo) || passengerInfo.length === 0) {
+                console.error('Invalid passenger info:', passengerInfo);
+                return;
+            }
+
+            container.innerHTML = passengerInfo.map((passenger, index) => `
+                        <div class="passenger-card">
+                            <h3>${passenger.passenger.title} ${passenger.passenger.firstName} ${passenger.passenger.lastName}</h3>
+                            <div class="passenger-form-grid">
+                                <div class="form-group">
+                                    <label>Passport Number</label>
+                                    <input type="text"
+                                           onchange="updatePassengerInfo(${index}, 'docNumber', this.value)"
+                                           value="${passenger.docNumber}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Issuing Country</label>
+                                    <select onchange="updatePassengerInfo(${index}, 'issuingCountry', this.value)">
+                                        <option value="">Select issuing country...</option>
+                                        <option value="GBR" ${passenger.issuingCountry === 'GBR' ? 'selected' : ''}>United Kingdom (GBR)</option>
+                                        <option value="USA" ${passenger.issuingCountry === 'USA' ? 'selected' : ''}>United States (USA)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nationality</label>
+                                    <select onchange="updatePassengerInfo(${index}, 'nationality', this.value)">
+                                        <option value="">Select nationality...</option>
+                                        <option value="GBR" ${passenger.nationality === 'GBR' ? 'selected' : ''}>United Kingdom (GBR)</option>
+                                        <option value="USA" ${passenger.nationality === 'USA' ? 'selected' : ''}>United States (USA)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Date of Birth</label>
+                                    <input type="date"
+                                           onchange="updatePassengerInfo(${index}, 'dob', this.value)"
+                                           value="${passenger.dob}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gender</label>
+                                    <select onchange="updatePassengerInfo(${index}, 'gender', this.value)">
+                                        <option value="" ${passenger.gender === '' ? 'selected' : ''}>Select...</option>
+                                        <option value="M" ${passenger.gender === 'M' ? 'selected' : ''}>Male</option>
+                                        <option value="F" ${passenger.gender === 'F' ? 'selected' : ''}>Female</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Passport Expiry Date</label>
+                                    <input type="date"
+                                           onchange="updatePassengerInfo(${index}, 'expiryDate', this.value)"
+                                           value="${passenger.expiryDate}">
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+        }
+
+        function updatePassengerInfo(index, field, value) {
+            if (passengerInfo[index]) {
+                passengerInfo[index][field] = value.toUpperCase();
+                console.log(`Updated passenger ${index}, field ${field}:`, passengerInfo[index]);
+            }
+        }
+
+        // Step 3: Handle APIS Information
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up APIS form handlers
+            document.querySelectorAll('#step3 input, #step3 select').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    apisInfo[e.target.id] = e.target.value.toUpperCase();
+                    console.log('Updated APIS info:', apisInfo);
+                });
+            });
+
+            // Set up dangerous goods agreement handler
+            const dangerousGoodsCheckbox = document.getElementById('dangerousGoodsAgreement');
+            if (dangerousGoodsCheckbox) {
+                dangerousGoodsCheckbox.addEventListener('change', (e) => {
+                    const button = document.getElementById('dangerousGoodsButton');
+                    if (button) {
+                        button.disabled = !e.target.checked;
+                    }
+                });
+            }
+        });
+
+        // Step 6: Review and Check-in
+        function renderReviewDetails() {
+            if (!bookingData) {
+                console.error('No booking data available for review');
+                return;
+            }
+
+            // Render flight details
+            const reviewContainer = document.getElementById('reviewDetails');
+            if (reviewContainer) {
+                reviewContainer.innerHTML = `
+                            <h4>Flight Details</h4>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Flight Number</span>
+                                ${bookingData.flightNumber}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Route</span>
+                                ${bookingData.origin} → ${bookingData.destination}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Date & Time</span>
+                                ${bookingData.departureDate} ${bookingData.departureTime}
+                            </div>
+                        `;
+            }
+
+            // Render passenger details
+            const passengerContainer = document.getElementById('reviewPassengerDetails');
+            if (passengerContainer) {
+                passengerContainer.innerHTML = `
+                        <h4>Passenger Information</h4>
+                        ${passengerInfo.map(p => `
+                            <div class="passenger-card">
+                                <h3>${p.passenger.title} ${p.passenger.firstName} ${p.passenger.lastName}</h3>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Passport Number</span>
+                                    ${p.docNumber}
+                                </div>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Issuing Country</span>
+                                    ${p.issuingCountry === 'GBR' ? 'United Kingdom (GBR)' :
+                        p.issuingCountry === 'USA' ? 'United States (USA)' : p.issuingCountry}
+                                </div>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Nationality</span>
+                                    ${p.nationality === 'GBR' ? 'United Kingdom (GBR)' :
+                        p.nationality === 'USA' ? 'United States (USA)' : p.nationality}
+                                </div>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Date of Birth</span>
+                                    ${formatDateForDisplay(p.dob)}
+                                </div>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Gender</span>
+                                    ${p.gender === 'M' ? 'Male' : p.gender === 'F' ? 'Female' : p.gender}
+                                </div>
+                                <div class="readonly-field">
+                                    <span class="readonly-label">Passport Expiry</span>
+                                    ${formatDateForDisplay(p.expiryDate)}
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+            }
+
+            // Render APIS details
+            const apisContainer = document.getElementById('reviewApisDetails');
+            if (apisContainer) {
+                apisContainer.innerHTML = `
+                            <h4>Address Information</h4>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Street Address</span>
+                                ${apisInfo.street}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">City</span>
+                                ${apisInfo.city}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">State/Province</span>
+                                ${apisInfo.state}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Postal Code</span>
+                                ${apisInfo.postal}
+                            </div>
+                            <div class="readonly-field">
+                                <span class="readonly-label">Country</span>
+                                ${apisInfo.country === 'GBR' ? 'United Kingdom (GBR)' :
+                        apisInfo.country === 'USA' ? 'United States (USA)' : apisInfo.country}
+                            </div>
+                        `;
+            }
+        }
+
+        // Final Check-in
+        async function performCheckin() {
+            // Validate required fields before proceeding
+            if (!validateAllFields()) {
+                showError(6, 'Please ensure all required information has been provided');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('http://localhost:7009/api/checkin/checkin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recordLocator: bookingData.recordLocator,
+                        from: bookingData.flightNumber,
+                        passengerInfo,
+                        apisInformation: apisInfo
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Check-in response:', data);
+
+                if (!data.success) {
+                    showError(6, data.message || 'Check-in failed');
+                    hideLoading();
+                    return;
+                }
+
+                renderBoardingPasses(data.boardingPasses);
+                hideLoading();
+                goToStep(7);
+
+            } catch (error) {
+                console.error('Check-in error:', error);
+                hideLoading();
+                showError(6, 'Check-in failed. Please try again.');
+            }
+        }
+
+        // Render boarding passes
+        function renderBoardingPasses(boardingPasses) {
+            const container = document.getElementById('boardingPassSection');
+            if (!container || !Array.isArray(boardingPasses)) {
+                console.error('Boarding pass container not found or invalid data');
+                return;
+            }
+
+            container.innerHTML = boardingPasses.map(pass => `
+                            <div class="boarding-pass">
+                                <div class="boarding-pass-header">
+                                    <h3>${pass.passenger.title} ${pass.passenger.firstName} ${pass.passenger.lastName}</h3>
+                                </div>
+                                <div class="boarding-pass-grid">
+                                    <div class="boarding-pass-field">
+                                        <strong>Flight</strong>
+                                        ${pass.flightNumber}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>Seat</strong>
+                                        ${pass.seatNumber}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>From</strong>
+                                        ${pass.origin}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>To</strong>
+                                        ${pass.destination}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>Date</strong>
+                                        ${pass.departureDate}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>Time</strong>
+                                        ${pass.departureTime}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>Gate</strong>
+                                        ${pass.departureGate}
+                                    </div>
+                                    <div class="boarding-pass-field">
+                                        <strong>Boarding Group</strong>
+                                        ${pass.boardingGroup}
+                                    </div>
+                                </div>
+                                ${pass.fastTrack === 'ELIGIBLE' ? '<div class="boarding-pass-field"><strong>Fast Track</strong>Eligible</div>' : ''}
+                                ${pass.loungeAccess ? `<div class="boarding-pass-field"><strong>Lounge Access</strong>${pass.loungeAccess}</div>` : ''}
+                            </div>
+                        `).join('');
+        }
+
+        function validateAllFields() {
+            // Validate passenger information
+            const isPassengerInfoValid = passengerInfo.every(p =>
+                p.docNumber &&
+                p.issuingCountry &&  // Added issuingCountry validation
+                p.nationality &&
+                p.dob &&
+                p.gender &&
+                p.expiryDate
+            );
+
+            if (!isPassengerInfoValid) {
+                return false;
+            }
+
+            // Validate APIS information
+            const isApisInfoValid =
+                apisInfo.street &&
+                apisInfo.city &&
+                apisInfo.state &&
+                apisInfo.postal &&
+                apisInfo.country;
+
+            return isApisInfoValid;
+        }
+
+    </script>
+
+</body>
+</html>

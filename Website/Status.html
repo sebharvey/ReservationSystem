@@ -1,0 +1,273 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flight Status</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .status-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 40px auto;
+        }
+
+        .centered-heading {
+            text-align: center;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .flight-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flight-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .flight-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error {
+            color: #e31837;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-ontime {
+            background: #b9c1c9;
+            color: #778899;
+        }
+
+        .status-landed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-boarding {
+            background: #fcdab8;
+            color: #f57c00;
+        }
+
+        .status-departed {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        /* New flashing animation for imminent boarding */
+        @keyframes flash {
+            0%, 100% {
+                background: #fcdab8;
+                color: #f57c00;
+            }
+
+            50% {
+                background: #f57c00;
+                color: white;
+            }
+        }
+
+        .status-boarding.imminent {
+            animation: flash 1s infinite;
+        }
+
+        .refresh-button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+            .refresh-button:hover {
+                background: #b31329;
+            }
+
+        .last-updated {
+            text-align: right;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .auto-refresh-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+
+    <h2 class="centered-heading">Flight Status</h2>
+
+    <div class="status-container">
+        <div class="auto-refresh-status">
+            <button onclick="manualRefresh()" class="refresh-button">Refresh Now</button>
+            <div class="last-updated" id="lastUpdated"></div>
+        </div>
+        <div id="statusContainer">
+            <div class="loading">Loading flight status...</div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        const REFRESH_INTERVAL = 60000; // 1 minutes in milliseconds
+        const IMMINENT_DEPARTURE_THRESHOLD = 15 * 60 * 1000; // 5 minutes in milliseconds
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const month = date.toLocaleString('default', { month: 'short' });
+            return `${date.getDate()}-${month}`;
+        }
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function getAircraftType(aircraftType) {
+            switch (aircraftType) {
+                case '789': return 'Boeing 787-9';
+                case '351': return 'Airbus A350-900';
+                case '333': return 'Airbus A330-300';
+                case '339': return 'Airbus A330-900';
+            }
+            return aircraftType;
+        }
+
+        function getStatusClass(status, departureDateTime) {
+            status = status.toLowerCase();
+            if (status.includes('landed')) return 'status-landed';
+            if (status.includes('departed')) return 'status-departed';
+            if (status.includes('boarding')) {
+                // Check if departure is within 5 minutes
+                const now = new Date();
+                const departure = new Date(departureDateTime);
+                const timeUntilDeparture = departure - now;
+
+                if (timeUntilDeparture <= IMMINENT_DEPARTURE_THRESHOLD && timeUntilDeparture > 0) {
+                    return 'status-boarding imminent';
+                }
+                return 'status-boarding';
+            }
+            return 'status-ontime';
+        }
+
+        function updateLastRefreshed() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            document.getElementById('lastUpdated').textContent = `Last updated: ${timeString}`;
+        }
+
+        async function loadFlightStatus() {
+            const statusContainer = document.getElementById('statusContainer');
+
+            try {
+                const response = await fetch('http://localhost:7009/api/status/flights');
+                const flights = await response.json();
+
+                if (flights.length === 0) {
+                    statusContainer.innerHTML = '<div class="error">No flights found</div>';
+                    return;
+                }
+
+                statusContainer.innerHTML = flights.map(flight => `
+                                <div class="flight-card">
+                                    <div class="flight-header">
+                                        <span>Flight ${flight.flightNumber}</span>
+                                        <span>${formatDate(flight.departureDateTime)}</span>
+                                    </div>
+                                    <div class="flight-details">
+                                        <div>
+                                            <div style="font-size: 1.2em">${formatTime(flight.departureDateTime)}</div>
+                                            <div>${flight.from}</div>
+                                        </div>
+                                        <div>→</div>
+                                        <div>
+                                            <div style="font-size: 1.2em">${formatTime(flight.arrivalDateTime)}</div>
+                                            <div>${flight.to}</div>
+                                        </div>
+                                        <div>
+                                            <div>${getAircraftType(flight.aircraft)}</div>
+                                            <div class="status-badge ${getStatusClass(flight.status, flight.departureDateTime)}">
+                                                ${flight.status}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('');
+
+                updateLastRefreshed();
+
+            } catch (error) {
+                statusContainer.innerHTML = `
+                                <div class="error">
+                                    Unable to load flight status. Please try again later.
+                                </div>
+                            `;
+            }
+        }
+
+        function manualRefresh() {
+            loadFlightStatus();
+            resetAutoRefresh();
+        }
+
+        function resetAutoRefresh() {
+            clearInterval(refreshInterval);
+            refreshInterval = setInterval(loadFlightStatus, REFRESH_INTERVAL);
+        }
+
+        loadFlightStatus();
+        resetAutoRefresh();
+
+        window.addEventListener('unload', () => {
+            clearInterval(refreshInterval);
+        });
+    </script>
+</body>
+</html>

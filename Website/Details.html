@@ -1,0 +1,478 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Passenger Details</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .passenger-section {
+            border-left: 4px solid #e31837;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        select {
+            width: 120px;
+        }
+
+        .required::after {
+            content: " *";
+            color: #e31837;
+        }
+
+        button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+            button:hover {
+                background: #b31329;
+            }
+
+            button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+            button.secondary {
+                background: #666;
+            }
+
+                button.secondary:hover {
+                    background: #444;
+                }
+
+        .payment-info {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .error {
+            color: #e31837;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .field-error {
+            color: #e31837;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+    <h2>Passenger Details</h2>
+    <form id="passengerForm" onsubmit="return false;">
+        <div id="passengers-container"></div>
+
+        <div class="section">
+            <h2>Contact Details</h2>
+            <div class="form-group">
+                <label for="email" class="required">Email Address</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="phone" class="required">Phone Number</label>
+                <input type="tel" id="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="loyalty">Loyalty Number (Optional)</label>
+                <input type="text" id="loyalty">
+            </div>
+        </div>
+
+        <div id="passenger-error" class="error">Please complete all required passenger and contact details before proceeding to seat selection.</div>
+
+        <div class="buttons">
+            <button onclick="proceedToSeats()" type="button" id="seats-button">Select Seats</button>
+        </div>
+
+        <div class="section">
+            <h2>Payment Details</h2>
+            <div class="payment-info">
+                <div class="form-group">
+                    <label for="cardNumber" class="required">Card Number</label>
+                    <input type="text" id="cardNumber" required maxlength="16">
+                    <div id="cardNumber-error" class="field-error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="expiry" class="required">Expiry Date</label>
+                    <input type="text" id="expiry" placeholder="MM/YY" required maxlength="5">
+                    <div id="expiry-error" class="field-error"></div>
+                </div>
+                <div class="form-group">
+                    <label for="cvv" class="required">CVV</label>
+                    <input type="text" id="cvv" required maxlength="3">
+                    <div id="cvv-error" class="field-error"></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="cardType" class="required">Card Type</label>
+                <select id="cardType" required>
+                    <option value="">Select card type</option>
+                    <option value="VISA">Visa</option>
+                    <option value="MASTERCARD">Mastercard</option>
+                    <option value="AMEX">American Express</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="payment-error" class="error">Please complete all required fields including payment details before proceeding.</div>
+
+        <div class="buttons">
+            <button class="secondary" onclick="goBack()" type="button">Back</button>
+            <button onclick="submitPayment()" type="submit">Pay Now</button>
+        </div>
+    </form>
+
+    <script>
+        let basket = JSON.parse(localStorage.getItem('flightBasket') || '{}');
+
+        function createPassengerForms() {
+            const container = document.getElementById('passengers-container');
+            const count = basket.passengerCount || 1;
+
+            for (let i = 0; i < count; i++) {
+                const section = document.createElement('div');
+                section.className = 'section passenger-section';
+                section.innerHTML = `
+                                <h2>Passenger ${i + 1}</h2>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="title_${i}" class="required">Title</label>
+                                        <select id="title_${i}" required onchange="validatePassengerDetails()">
+                                            <option value="">Select title</option>
+                                            <option value="mr">Mr</option>
+                                            <option value="mrs">Mrs</option>
+                                            <option value="ms">Ms</option>
+                                            <option value="miss">Miss</option>
+                                            <option value="dr">Dr</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="firstName_${i}" class="required">First Name</label>
+                                        <input type="text" id="firstName_${i}" required onchange="validatePassengerDetails()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="lastName_${i}" class="required">Last Name</label>
+                                        <input type="text" id="lastName_${i}" required onchange="validatePassengerDetails()">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dob_${i}" class="required">Date of Birth</label>
+                                    <input type="date" id="dob_${i}" required onchange="validatePassengerDetails()">
+                                </div>
+                            `;
+                container.appendChild(section);
+            }
+
+            // Add event listeners for contact details
+            document.getElementById('email').addEventListener('input', validatePassengerDetails);
+            document.getElementById('phone').addEventListener('input', validatePassengerDetails);
+        }
+
+        function setupCardValidation() {
+            const cardNumber = document.getElementById('cardNumber');
+            const expiry = document.getElementById('expiry');
+            const cvv = document.getElementById('cvv');
+
+            // Card number validation
+            cardNumber.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+                e.target.value = value;
+                validateCardNumber(value);
+            });
+
+            cardNumber.addEventListener('paste', function (e) {
+                e.preventDefault();
+                let paste = (e.clipboardData || window.clipboardData).getData('text');
+                let value = paste.replace(/\D/g, ''); // Remove all non-digits
+                e.target.value = value.slice(0, 16);
+                validateCardNumber(value);
+            });
+
+            // Expiry date validation
+            expiry.addEventListener('input', function (e) {
+                let value = e.target.value;
+                if (value.length === 2 && !value.includes('/')) {
+                    value += '/';
+                    e.target.value = value;
+                }
+                validateExpiryDate(value);
+            });
+
+            // CVV validation
+            cvv.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+                e.target.value = value;
+                validateCVV(value);
+            });
+        }
+
+        function validateCardNumber(value) {
+            const errorElement = document.getElementById('cardNumber-error');
+            if (!/^\d{16}$/.test(value)) {
+                errorElement.textContent = 'Card number must be 16 digits';
+                errorElement.style.display = 'block';
+                return false;
+            }
+            errorElement.style.display = 'none';
+            return true;
+        }
+
+        function validateExpiryDate(value) {
+            const errorElement = document.getElementById('expiry-error');
+            const regex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
+
+            if (!regex.test(value)) {
+                errorElement.textContent = 'Invalid format (MM/YY)';
+                errorElement.style.display = 'block';
+                return false;
+            }
+
+            const [month, year] = value.split('/');
+            const expiry = new Date(2000 + parseInt(year), parseInt(month) - 1);
+            const today = new Date();
+
+            if (expiry < today) {
+                errorElement.textContent = 'Card has expired';
+                errorElement.style.display = 'block';
+                return false;
+            }
+
+            errorElement.style.display = 'none';
+            return true;
+        }
+
+        function validateCVV(value) {
+            const errorElement = document.getElementById('cvv-error');
+            if (!/^\d{3}$/.test(value)) {
+                errorElement.textContent = 'CVV must be 3 digits';
+                errorElement.style.display = 'block';
+                return false;
+            }
+            errorElement.style.display = 'none';
+            return true;
+        }
+
+        function prepopulateFormData() {
+            // Prepopulate passenger details if they exist
+            if (basket.passengers) {
+                basket.passengers.forEach((passenger, index) => {
+                    if (document.getElementById(`title_${index}`)) {
+                        document.getElementById(`title_${index}`).value = passenger.title || '';
+                        document.getElementById(`firstName_${index}`).value = passenger.firstName || '';
+                        document.getElementById(`lastName_${index}`).value = passenger.lastName || '';
+                        document.getElementById(`dob_${index}`).value = passenger.dateOfBirth || '';
+                    }
+                });
+            }
+
+            // Prepopulate contact details if they exist
+            if (basket.contactDetails) {
+                document.getElementById('email').value = basket.contactDetails.email || '';
+                document.getElementById('phone').value = basket.contactDetails.phone || '';
+                document.getElementById('loyalty').value = basket.contactDetails.loyaltyNumber || '';
+            }
+
+            // Prepopulate payment details if they exist
+            if (basket.paymentDetails) {
+                document.getElementById('cardNumber').value = basket.paymentDetails.cardNumber || '';
+                document.getElementById('expiry').value = basket.paymentDetails.expiry || '';
+                document.getElementById('cvv').value = basket.paymentDetails.cvv || '';
+                document.getElementById('cardType').value = basket.paymentDetails.cardType || '';
+            }
+
+            // Validate the form after prepopulation
+            validatePassengerDetails();
+        }
+
+        function validatePassengerDetails() {
+            const count = basket.passengerCount || 1;
+            const errorMessage = document.getElementById('passenger-error');
+            const seatsButton = document.getElementById('seats-button');
+
+            // Check passenger details
+            for (let i = 0; i < count; i++) {
+                if (!document.getElementById(`title_${i}`).value ||
+                    !document.getElementById(`firstName_${i}`).value ||
+                    !document.getElementById(`lastName_${i}`).value ||
+                    !document.getElementById(`dob_${i}`).value) {
+                    errorMessage.style.display = 'block';
+                    seatsButton.disabled = true;
+                    return false;
+                }
+            }
+
+            // Check contact details
+            if (!document.getElementById('email').value ||
+                !document.getElementById('phone').value) {
+                errorMessage.style.display = 'block';
+                seatsButton.disabled = true;
+                return false;
+            }
+
+            // All required fields are filled
+            errorMessage.style.display = 'none';
+            seatsButton.disabled = false;
+            return true;
+        }
+
+        function validatePaymentDetails() {
+            const cardNumber = document.getElementById('cardNumber').value;
+            const expiry = document.getElementById('expiry').value;
+            const cvv = document.getElementById('cvv').value;
+            const cardType = document.getElementById('cardType').value;
+
+            return validateCardNumber(cardNumber) &&
+                validateExpiryDate(expiry) &&
+                validateCVV(cvv) &&
+                cardType !== '';
+        }
+
+        function collectPassengerData() {
+            const passengers = [];
+            const count = basket.passengerCount || 1;
+
+            for (let i = 0; i < count; i++) {
+                passengers.push({
+                    title: document.getElementById(`title_${i}`).value,
+                    firstName: document.getElementById(`firstName_${i}`).value,
+                    lastName: document.getElementById(`lastName_${i}`).value,
+                    dateOfBirth: document.getElementById(`dob_${i}`).value
+                });
+            }
+
+            return passengers;
+        }
+
+        function proceedToSeats() {
+            if (!validatePassengerDetails()) {
+                document.getElementById('passenger-error').style.display = 'block';
+                return;
+            }
+
+            // Update basket with passenger and contact details
+            basket = {
+                ...basket,
+                passengers: collectPassengerData(),
+                contactDetails: {
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    loyaltyNumber: document.getElementById('loyalty').value
+                }
+            };
+
+            localStorage.setItem('flightBasket', JSON.stringify(basket));
+            window.location.href = 'Seats.html';
+        }
+
+        function submitPayment() {
+            if (!validatePassengerDetails()) {
+                document.getElementById('passenger-error').style.display = 'block';
+                return;
+            }
+
+            if (!validatePaymentDetails()) {
+                document.getElementById('payment-error').style.display = 'block';
+                return;
+            }
+
+            // Update basket with all details including payment
+            updateBasket();
+
+            // Redirect to order confirmation page
+            window.location.href = 'Order.html';
+        }
+
+        function updateBasket() {
+            basket = {
+                ...basket,
+                passengers: collectPassengerData(),
+                contactDetails: {
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    loyaltyNumber: document.getElementById('loyalty').value
+                },
+                paymentDetails: {
+                    cardNumber: document.getElementById('cardNumber').value,
+                    expiry: document.getElementById('expiry').value,
+                    cvv: document.getElementById('cvv').value,
+                    cardType: document.getElementById('cardType').value
+                }
+            };
+
+            localStorage.setItem('flightBasket', JSON.stringify(basket));
+        }
+
+        function goBack() {
+            window.location.href = 'Bookflow.html';
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function () {
+            createPassengerForms();
+            setupCardValidation();
+            prepopulateFormData();
+        });
+    </script>
+</body>
+</html>

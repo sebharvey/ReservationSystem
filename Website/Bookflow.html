@@ -1,0 +1,504 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flight Search</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .search-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+            button:hover {
+                background: #b31329;
+            }
+
+        .price-button {
+            background: none;
+            border: 1px solid #e31837;
+            color: #e31837;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0;
+            width: 100%;
+        }
+
+            .price-button:hover {
+                background: #fff0f0;
+            }
+
+            .price-button.selected {
+                background: #e31837;
+                color: white;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f8f8;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error {
+            color: #e31837;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .flight-section {
+            margin-bottom: 30px;
+        }
+
+            .flight-section h2 {
+                color: #333;
+            }
+
+        .actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        #next-button {
+            background: #2e8b57;
+        }
+
+            #next-button:hover {
+                background: #236b43;
+            }
+
+            #next-button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .currency-select {
+            width: 100px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .passenger-select {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .airline-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .aircraft-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+    <h2>Flight Search</h2>
+
+    <div class="search-form">
+        <div class="form-group">
+            <label for="currency">Currency:</label>
+            <select id="currency" class="currency-select">
+                <option value="GBP">GBP (£)</option>
+                <option value="USD">USD ($)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="passengers">Number of Passengers:</label>
+            <select id="passengers" class="passenger-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="from">From:</label>
+            <input type="text" id="from" value="LHR" required>
+        </div>
+        <div class="form-group">
+            <label for="to">To:</label>
+            <input type="text" id="to" value="JFK" required>
+        </div>
+        <div class="form-group">
+            <label for="outbound-date">Outbound Date:</label>
+            <input type="date" id="outbound-date" required>
+        </div>
+        <div class="form-group">
+            <label for="return-flight">Return Flight:</label>
+            <input type="checkbox" id="return-flight">
+        </div>
+        <div class="form-group" id="return-date-group" style="display: none;">
+            <label for="return-date">Return Date:</label>
+            <input type="date" id="return-date">
+        </div>
+        <button onclick="searchFlights()">Search Flights</button>
+        <button onclick="clearBasket()" style="background: #666;">Clear Basket</button>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="loading" class="loading" style="display: none;">Searching for flights...</div>
+
+    <div id="outbound-flights" class="flight-section">
+        <h2>Outbound Flights</h2>
+        <div id="outbound-table"></div>
+    </div>
+
+    <div id="return-flights" class="flight-section" style="display: none;">
+        <h2>Return Flights</h2>
+        <div id="return-table"></div>
+    </div>
+
+    <div class="actions">
+        <button id="next-button" onclick="proceedToNext()" disabled>Next</button>
+    </div>
+
+    <script>
+        // Initialize the date inputs with tomorrow's date
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('outbound-date').value = tomorrow.toISOString().split('T')[0];
+
+        // Currency symbol mapping
+        const currencySymbols = {
+            'GBP': '£',
+            'USD': '$'
+        };
+
+        // Airline code mapping
+        const airlines = {
+            'VS': 'Virgin Atlantic',
+            'BA': 'British Airways',
+            'AA': 'American Airlines',
+            'UA': 'United Airlines',
+            'DL': 'Delta Air Lines',
+            'LH': 'Lufthansa',
+            'AF': 'Air France',
+            'KL': 'KLM'
+        };
+
+
+        // Function to get airline name from flight number
+        function getAirlineName(flightNo) {
+            const airlineCode = flightNo.substring(0, 2);
+            return airlines[airlineCode] || airlineCode;
+        }
+
+        // Function to get aircraft type (simulated - in real app would come from API)
+        function getAircraftType(aircraftType) {
+
+            switch (aircraftType) {
+                case '789': return 'Boeing 787-9';
+                case '351': return 'Airbus A350-900';
+                case '333': return 'Airbus A330-300';
+                case '339': return 'Airbus A330-900';
+            }
+
+            return aircraftType;
+        }
+
+
+        // Show/hide return date based on checkbox
+        document.getElementById('return-flight').addEventListener('change', function (e) {
+            document.getElementById('return-date-group').style.display = e.target.checked ? 'block' : 'none';
+            document.getElementById('return-flights').style.display = 'none';
+            if (e.target.checked) {
+                const returnDate = new Date(tomorrow);
+                returnDate.setDate(returnDate.getDate() + 7);
+                document.getElementById('return-date').value = returnDate.toISOString().split('T')[0];
+            }
+            updateNextButton();
+        });
+
+        // Initialize selections
+        let selectedOutboundOfferId = null;
+        let selectedInboundOfferId = null;
+
+        async function searchFlights() {
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const outboundDate = document.getElementById('outbound-date').value;
+            const isReturn = document.getElementById('return-flight').checked;
+            const returnDate = document.getElementById('return-date').value;
+
+            // Reset selections
+            selectedOutboundOfferId = null;
+            selectedInboundOfferId = null;
+            updateNextButton();
+
+            // Show loading state
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('outbound-table').innerHTML = '';
+            document.getElementById('return-table').innerHTML = '';
+
+            try {
+                // Search outbound flights
+                const outboundFlights = await searchFlightSegment(from, to, outboundDate);
+                displayFlights(outboundFlights, 'outbound-table', 'outbound');
+
+                // Search return flights if needed
+                if (isReturn && returnDate) {
+                    document.getElementById('return-flights').style.display = 'block';
+                    const returnFlights = await searchFlightSegment(to, from, returnDate);
+                    displayFlights(returnFlights, 'return-table', 'return');
+                } else {
+                    document.getElementById('return-flights').style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error searching flights: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function searchFlightSegment(from, to, date) {
+            const currency = document.getElementById('currency').value;
+            const passengerCount = parseInt(document.getElementById('passengers').value);
+
+            const payload = {
+                From: from,
+                To: to,
+                Date: date,
+                Currency: currency,
+                Passengers: [
+                    {
+                        Ptc: "ADT",
+                        Total: passengerCount
+                    }
+                ]
+            };
+
+            const response = await fetch('http://localhost:7009/api/offer/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        function displayFlights(data, tableId, direction) {
+            const currency = document.getElementById('currency').value;
+            const currencySymbol = currencySymbols[currency];
+
+            const table = document.createElement('table');
+            table.innerHTML = `
+                                            <thead>
+                                                <tr>
+                                                    <th>Flight</th>
+                                                    <th>Airline</th>
+                                                    <th>Aircraft</th>
+                                                    <th>Departure</th>
+                                                    <th>Arrival</th>
+                                                    <th>Economy</th>
+                                                    <th>Premium</th>
+                                                    <th>Upper Class</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        `;
+
+            data.flights.forEach(flight => {
+                const row = document.createElement('tr');
+                const economyOffer = flight.offers.find(o => o.bookingClass === 'Y');
+                const premiumOffer = flight.offers.find(o => o.bookingClass === 'W');
+                const upperOffer = flight.offers.find(o => o.bookingClass === 'J');
+                const airlineName = getAirlineName(flight.flightNo);
+                const aircraftType = getAircraftType(flight.aircraftType);
+
+                row.innerHTML = `
+                                                <td>${flight.flightNo}</td>
+                                                <td>
+                                                    <div class="airline-info">${airlineName}</div>
+                                                </td>
+                                                <td>
+                                                    <div class="aircraft-info">${aircraftType}</div>
+                                                </td>
+                                                <td>${formatDateTime(flight.departureDateTime)}</td>
+                                                <td>${formatDateTime(flight.arrivalDateTime)}</td>
+                                                <td><button class="price-button" onclick="selectPrice('${direction}', '${economyOffer.offerId}')" data-offer="${economyOffer.offerId}">${currencySymbol}${economyOffer.price}</button></td>
+                                                <td><button class="price-button" onclick="selectPrice('${direction}', '${premiumOffer.offerId}')" data-offer="${premiumOffer.offerId}">${currencySymbol}${premiumOffer.price}</button></td>
+                                                <td><button class="price-button" onclick="selectPrice('${direction}', '${upperOffer.offerId}')" data-offer="${upperOffer.offerId}">${currencySymbol}${upperOffer.price}</button></td>
+                                            `;
+
+                table.querySelector('tbody').appendChild(row);
+            });
+
+            document.getElementById(tableId).innerHTML = '';
+            document.getElementById(tableId).appendChild(table);
+        }
+
+        function formatDateTime(dateTimeStr) {
+            const date = new Date(dateTimeStr);
+            return date.toLocaleString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: 'short'
+            });
+        }
+
+        function selectPrice(direction, offerId) {
+            // Remove previous selection in this table
+            const table = direction === 'outbound' ? 'outbound-table' : 'return-table';
+            document.querySelectorAll(`#${table} .price-button`).forEach(button => {
+                button.classList.remove('selected');
+            });
+
+            // Find and select the clicked button
+            const selectedButton = document.querySelector(`#${table} button[data-offer="${offerId}"]`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
+            }
+
+            if (direction === 'outbound') {
+                selectedOutboundOfferId = offerId;
+            } else {
+                selectedInboundOfferId = offerId;
+            }
+
+            updateBasket();
+            updateNextButton();
+        }
+
+        function updateBasket() {
+            const passengerCount = parseInt(document.getElementById('passengers').value);
+            const basket = {
+                outboundOfferId: selectedOutboundOfferId,
+                inboundOfferId: selectedInboundOfferId,
+                passengerCount: passengerCount
+            };
+
+            localStorage.setItem('flightBasket', JSON.stringify(basket));
+        }
+
+        function clearBasket() {
+            localStorage.removeItem('flightBasket');
+            selectedOutboundOfferId = null;
+            selectedInboundOfferId = null;
+            document.getElementById('passengers').value = "1";
+            document.querySelectorAll('.price-button').forEach(button => {
+                button.classList.remove('selected');
+            });
+            document.getElementById('return-flight').checked = false;
+            document.getElementById('return-date-group').style.display = 'none';
+            document.getElementById('return-flights').style.display = 'none';
+            document.getElementById('outbound-table').innerHTML = '';
+            document.getElementById('return-table').innerHTML = '';
+            updateNextButton();
+        }
+
+        function updateNextButton() {
+            const isReturn = document.getElementById('return-flight').checked;
+            const nextButton = document.getElementById('next-button');
+
+            if (isReturn) {
+                nextButton.disabled = !(selectedOutboundOfferId && selectedInboundOfferId);
+            } else {
+                nextButton.disabled = !selectedOutboundOfferId;
+            }
+        }
+
+        function proceedToNext() {
+            // Check if we have valid selections before proceeding
+            const isReturn = document.getElementById('return-flight').checked;
+            if (isReturn && (!selectedOutboundOfferId || !selectedInboundOfferId)) {
+                return;
+            }
+            if (!selectedOutboundOfferId) {
+                return;
+            }
+
+            // Redirect to the passenger details page
+            window.location.href = 'Details.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reservation Console</title>
+    <style>
+        body {
+            background-color: #262e42;
+            color: #aaaaaa;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            text-transform: uppercase;
+        }
+
+        .title {
+            margin: 0 0 20px 0;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #login-container, #console-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Login styles */
+        #login-form {
+            background-color: #000;
+            padding: 20px;
+            max-width: 300px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-input {
+            background-color: #1a1a1a;
+            border: none;
+            color: #aaaaaa;
+            padding: 8px;
+            font-family: monospace;
+        }
+
+            .form-input:focus {
+                outline: none;
+            }
+
+        /* Console styles */
+        #console {
+            flex-grow: 1;
+            background-color: #121827;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+        #input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #prompt {
+            color: #aaaaaa;
+            font-weight: bold;
+        }
+
+        #command-input {
+            flex-grow: 1;
+            background-color: #121827;
+            border: none;
+            color: #aaaaaa;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+            #command-input:focus {
+                outline: none;
+            }
+
+        .button {
+            background-color: #333;
+            color: #aaaaaa;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+
+            .button:hover {
+                background-color: #444;
+            }
+
+        #logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        #error-message {
+            color: #ff6666;
+            text-align: center;
+            margin-bottom: 10px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login View -->
+    <div id="login-container">
+        <div id="error-message"></div>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="userId">User Id:</label>
+                <input type="text" id="userId" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" class="form-input" required>
+            </div>
+            <button type="submit" class="button">Login</button>
+        </form>
+    </div>
+
+    <!-- Console View -->
+    <div id="console-container">
+        <button id="logout-button" class="button">Logout</button>
+        <div id="console"></div>
+        <div id="input-container">
+            <span id="prompt">&gt;</span>
+            <input type="text" id="command-input" placeholder="Enter command..." autocomplete="off">
+        </div>
+    </div>
+
+    <script>
+        const loginContainer = document.getElementById('login-container');
+        const consoleContainer = document.getElementById('console-container');
+        const loginForm = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+        const consoleElement = document.getElementById('console');
+        const inputElement = document.getElementById('command-input');
+        const logoutButton = document.getElementById('logout-button');
+
+        const api = 'http://localhost:7009';
+
+        // Command history functionality
+        let commandHistory = [];
+        let currentHistoryIndex = -1;
+        let tempCommand = ''; // Store current command when navigating history
+
+        // Check if user is already logged in
+        function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                showConsole();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            loginContainer.style.display = 'block';
+            consoleContainer.style.display = 'none';
+            errorMessage.textContent = '';
+            loginForm.reset();
+        }
+
+        function showConsole() {
+            loginContainer.style.display = 'none';
+            consoleContainer.style.display = 'flex';
+            inputElement.focus();
+            displayOutput('Reservation Console v1.0.0\nType your command and press Enter...');
+        }
+
+        async function authenticate(userId, password) {
+            try {
+                const response = await fetch(api + '/api/command/authenticate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId, password })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Authentication failed');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('authToken', data.token);
+                showConsole();
+            } catch (error) {
+                errorMessage.textContent = error.message;
+            }
+        }
+
+        async function processCommand(command) {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                showLogin();
+                return;
+            }
+
+            try {
+                const response = await fetch(api + '/api/command/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ command })
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('authToken');
+                    showLogin();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayOutput(command + '\r\n\r\n' + data.data);
+
+                // Add command to history after successful execution
+                commandHistory.push(command);
+                currentHistoryIndex = commandHistory.length;
+            } catch (error) {
+                displayOutput(command + '\r\n\r\n' + `Error: ${error.message}`);
+            }
+        }
+
+        function displayOutput(output) {
+            consoleElement.textContent = output;
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            // Clear command history on logout
+            commandHistory = [];
+            currentHistoryIndex = -1;
+            showLogin();
+        }
+
+        // Command history navigation
+        function navigateHistory(direction) {
+            if (commandHistory.length === 0) return;
+
+            // Store current input if we're just starting to navigate
+            if (currentHistoryIndex === commandHistory.length) {
+                tempCommand = inputElement.value;
+            }
+
+            if (direction === 'up') {
+                currentHistoryIndex = Math.max(0, currentHistoryIndex - 1);
+                inputElement.value = commandHistory[currentHistoryIndex];
+            } else if (direction === 'down') {
+                currentHistoryIndex = Math.min(commandHistory.length, currentHistoryIndex + 1);
+                inputElement.value = currentHistoryIndex === commandHistory.length
+                    ? tempCommand
+                    : commandHistory[currentHistoryIndex];
+            }
+
+            // Move cursor to end of input
+            setTimeout(() => {
+                inputElement.selectionStart = inputElement.value.length;
+                inputElement.selectionEnd = inputElement.value.length;
+            }, 0);
+        }
+
+        // Event Listeners
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            authenticate(userId, password);
+        });
+
+        inputElement.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                navigateHistory('up');
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                navigateHistory('down');
+            }
+        });
+
+        inputElement.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' && inputElement.value.trim() !== '') {
+                const command = inputElement.value;
+                processCommand(command);
+                inputElement.value = '';
+                // Reset history navigation
+                currentHistoryIndex = commandHistory.length;
+                tempCommand = '';
+            }
+        });
+
+        logoutButton.addEventListener('click', logout);
+
+        consoleElement.addEventListener('click', () => {
+            inputElement.focus();
+        });
+
+        // Initialize the app
+        checkAuth();
+    </script>
+</body>
+</html>

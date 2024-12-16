@@ -1,0 +1,758 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Booking</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        /* Login form styles */
+        .login-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            max-width: 500px;
+            margin: 40px auto;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+            button:hover {
+                background: #b31329;
+            }
+
+            button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        /* Error and loading states */
+        .error {
+            color: #e31837;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        /* Booking details container */
+        .booking-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* Record locator styles */
+        .record-locator {
+            text-align: center;
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .record-locator-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .record-locator-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* Section styles */
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+            .section:last-child {
+                border-bottom: none;
+            }
+
+            .section h3 {
+                color: #333;
+                margin-bottom: 15px;
+            }
+
+        /* Flight card styles */
+        .flight-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flight-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .flight-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Passenger and ticket styles */
+        .passenger-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .ticket-info {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .centered-heading {
+            text-align: center;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .logout-button {
+            background: #666;
+            margin-top: 20px;
+        }
+
+        /* Boarding pass styles */
+        .boarding-pass {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .boarding-pass-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .boarding-pass-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-group {
+            margin-bottom: 10px;
+        }
+
+        .detail-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-weight: bold;
+        }
+
+        /* Service and status styles */
+        .service-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            background: #e3f2fd;
+            color: #1976d2;
+            font-size: 0.9em;
+        }
+
+        .booking-status {
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        /* Slideshow styles */
+        .slideshow-container {
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .slides {
+            display: flex;
+            transition: transform 0.3s ease-in-out;
+            width: 100%;
+        }
+
+        .slide {
+            flex: 0 0 100%;
+            width: 100%;
+        }
+
+        .slideshow-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .slide-button {
+            background: #e31837;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+        }
+
+            .slide-button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .slide-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .slide-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            cursor: pointer;
+        }
+
+            .slide-dot.active {
+                background: #e31837;
+            }
+
+        /* Message styles */
+        .message-banner {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #fff3e0;
+            border: 1px solid #ffe0b2;
+        }
+
+        .ticket-details {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+
+        /* Additional service information */
+        .boarding-pass-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 4px;
+        }
+
+        .boarding-pass-qr {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .boarding-pass-details {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Modified to accommodate QR code */
+            gap: 15px;
+            align-items: start;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .passenger-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .booking-class {
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+
+    <h2 class="centered-heading">Manage Booking</h2>
+
+    <!-- Login Form -->
+    <div id="loginForm" class="login-form">
+        <div class="form-group">
+            <label for="recordLocator">Booking Reference (6 letters/numbers)</label>
+            <input type="text" id="recordLocator" maxlength="6" required>
+        </div>
+        <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" required>
+        </div>
+        <button onclick="login()">View Booking</button>
+        <div id="loginError" class="error"></div>
+    </div>
+
+    <div id="loading" class="loading">Loading booking details...</div>
+
+    <!-- Booking Details -->
+    <div id="bookingDetails" class="booking-details">
+        <div class="record-locator">
+            <div class="record-locator-label">Booking Reference</div>
+            <div id="displayedRecordLocator" class="record-locator-value"></div>
+            <div id="bookingStatus" class="booking-status"></div>
+        </div>
+
+        <div class="section">
+            <h3>Flight Details</h3>
+            <div id="flightDetails"></div>
+        </div>
+
+        <div class="section">
+            <h3>Passenger Details</h3>
+            <div id="passengerDetails"></div>
+        </div>
+
+        <div class="section">
+            <h3>Contact Details</h3>
+            <div id="contactDetails"></div>
+        </div>
+
+        <button onclick="logout()" class="logout-button">Back to Login</button>
+    </div>
+
+    <script>
+
+        // Format date to dd-MMM (e.g., 24-Dec)
+        function formatDate(dateStr) {
+            const months = {
+                'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+            };
+            const day = dateStr.substring(0, 2);
+            const month = dateStr.substring(2);
+            const currentYear = new Date().getFullYear();
+            const date = new Date(currentYear, months[month], parseInt(day));
+            return `${date.getDate()}-${date.toLocaleString('default', { month: 'short' })}`;
+        }
+
+        // Format time (e.g., 14:30)
+        function formatTime(timeStr) {
+            return timeStr.substring(0, 2) + ':' + timeStr.substring(2);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('bookingDetails').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Slideshow functionality
+        function createSlideshow(containerId, boardingPasses) {
+            let currentSlide = 0;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // Generate QR codes for each boarding pass
+            boardingPasses.forEach((bp, index) => {
+                const qrId = `qr-${containerId}-${index}`;
+                new QRCode(document.getElementById(qrId), {
+                    text: bp.barcodeData || 'No barcode data available',
+                    width: 128,
+                    height: 128
+                });
+            });
+
+            const slidesContainer = container.querySelector('.slides');
+            const prevButton = container.querySelector('.prev-slide');
+            const nextButton = container.querySelector('.next-slide');
+            const dotsContainer = container.querySelector('.slide-dots');
+
+            function updateSlides() {
+                slidesContainer.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+                // Update dots
+                const dots = dotsContainer.querySelectorAll('.slide-dot');
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentSlide);
+                });
+
+                // Update buttons
+                prevButton.disabled = currentSlide === 0;
+                nextButton.disabled = currentSlide === boardingPasses.length - 1;
+            }
+
+            function goToSlide(index) {
+                currentSlide = index;
+                updateSlides();
+            }
+
+            // Initialize dots
+            boardingPasses.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'slide-dot' + (index === 0 ? ' active' : '');
+                dot.onclick = () => goToSlide(index);
+                dotsContainer.appendChild(dot);
+            });
+
+            // Add event listeners
+            prevButton.onclick = () => {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    updateSlides();
+                }
+            };
+
+            nextButton.onclick = () => {
+                if (currentSlide < boardingPasses.length - 1) {
+                    currentSlide++;
+                    updateSlides();
+                }
+            };
+
+            // Add touch support
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            slidesContainer.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            slidesContainer.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                const diff = touchStartX - touchEndX;
+
+                if (Math.abs(diff) > 50) { // Minimum swipe distance
+                    if (diff > 0 && currentSlide < boardingPasses.length - 1) {
+                        // Swipe left
+                        currentSlide++;
+                    } else if (diff < 0 && currentSlide > 0) {
+                        // Swipe right
+                        currentSlide--;
+                    }
+                    updateSlides();
+                }
+            });
+
+            updateSlides();
+        }
+
+        function getCabinName(bookingClass) {
+            switch (bookingClass) {
+                case 'J': return 'Upper Class';
+                case 'W': return 'Premium';
+                default: return 'Economy';
+            }
+        }
+
+        function getPassengerName(passengerId, passengers) {
+
+            var passenger = passengers[passengerId - 1];
+
+            return (passenger?.title || '') + ' ' + (passenger?.firstName || '') + ' ' + (passenger?.lastName || '');
+        }
+
+        function displayBoardingPasses(boardingPasses, containerId, passengers) {
+            if (!boardingPasses || boardingPasses.length === 0) return '';
+
+            const slides = boardingPasses.map((bp, index) => {
+                let services = [];
+                if (bp.fastTrack === "ELIGIBLE") services.push("Fast Track");
+                if (bp.loungeAccess === "CLUBHOUSE") services.push("Clubhouse Access");
+
+                const qrId = `qr-${containerId}-${index}`;
+
+                return `<div class="slide">
+                                                <div class="boarding-pass">
+                                                    <div class="passenger-name">
+                                                        ${getPassengerName(bp.passengerId, passengers)}
+                                                    </div>
+                                                    <div class="booking-class">
+                                                        Class: ${getCabinName(bp.bookingClass)}
+                                                    </div>
+                                                    <div class="boarding-pass-header">
+                                                        <div>Gate: ${bp.gate || 'Not Assigned'}</div>
+                                                        <div>Seat: ${bp.seatNumber || 'Not Assigned'}</div>
+                                                    </div>
+                                                    <div class="boarding-pass-details">
+                                                        <div class="details-grid">
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">Flight</div>
+                                                                <div class="detail-value">${bp.flightNumber}</div>
+                                                            </div>
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">From</div>
+                                                                <div class="detail-value">${bp.origin}</div>
+                                                            </div>
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">To</div>
+                                                                <div class="detail-value">${bp.destination}</div>
+                                                            </div>
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">Date</div>
+                                                                <div class="detail-value">${formatDate(bp.departureDate)}</div>
+                                                            </div>
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">Time</div>
+                                                                <div class="detail-value">${formatTime(bp.departureTime)}</div>
+                                                            </div>
+                                                            <div class="detail-group">
+                                                                <div class="detail-label">Group</div>
+                                                                <div class="detail-value">${bp.boardingGroup}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="boarding-pass-qr">
+                                                            <div id="${qrId}"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="margin-top: 10px">
+                                                        ${services.map(s => `<span class="service-tag">${s}</span>`).join(' ')}
+                                                    </div>
+                                                    ${bp.securityMessages.length > 0 ? `
+                                                        <div style="margin-top: 10px">
+                                                            <div class="detail-label">Special Services</div>
+                                                            <div>${bp.securityMessages.join(', ')}</div>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `;
+            }).join('');
+
+            return `
+                                        <div id="${containerId}" class="slideshow-container">
+                                            <div class="slides">
+                                                ${slides}
+                                            </div>
+                                            <div class="slideshow-nav">
+                                                <button class="slide-button prev-slide">Previous</button>
+                                                <div class="slide-dots"></div>
+                                                <button class="slide-button next-slide">Next</button>
+                                            </div>
+                                        </div>
+                                    `;
+        }
+
+        function displayBooking(booking) {
+            hideLoading();
+            document.getElementById('bookingDetails').style.display = 'block';
+
+            // Display record locator and status
+            document.getElementById('displayedRecordLocator').textContent = booking.recordLocator;
+            document.getElementById('bookingStatus').textContent = booking.status;
+
+            // Display flights
+            const flightDetails = document.getElementById('flightDetails');
+            flightDetails.innerHTML = booking.segments.map((segment, index) => {
+                const boardingPasses = booking.boardingPasses.filter(bp => bp.flightNumber === segment.flightNumber);
+                const slideshowId = `bp-${segment.flightNumber}`;
+                const hasBoardingPasses = boardingPasses.length > 0;
+
+                return `
+                                                <div class="flight-card">
+                                                    <div class="flight-header">
+                                                        <span>Flight ${segment.flightNumber}</span>
+                                                        <span>${formatDate(segment.departureDate)}</span>
+                                                    </div>
+                                                    <div class="flight-details">
+                                                        <div>
+                                                            <div style="font-size: 1.2em">${formatTime(segment.departureTime)}</div>
+                                                            <div>${segment.origin}</div>
+                                                        </div>
+                                                        <div>→</div>
+                                                        <div>
+                                                            <div style="font-size: 1.2em">${formatTime(segment.arrivalTime)}</div>
+                                                            <div>${segment.destination}</div>
+                                                        </div>
+                                                    </div>
+                                                    ${hasBoardingPasses ? displayBoardingPasses(boardingPasses, slideshowId, booking.passengers) : ''}
+                                                </div>
+                                            `;
+            }).join('');
+
+            // Initialize slideshows for each flight that has boarding passes
+            booking.segments.forEach(segment => {
+                const boardingPasses = booking.boardingPasses.filter(bp => bp.flightNumber === segment.flightNumber);
+                if (boardingPasses.length > 0) {
+                    createSlideshow(`bp-${segment.flightNumber}`, boardingPasses);
+                }
+            });
+
+            // Display passengers with tickets
+            const passengerDetails = document.getElementById('passengerDetails');
+            passengerDetails.innerHTML = booking.passengers.map(passenger => {
+                const ticket = booking.tickets.find(t => t.ticketNumber === passenger.ticketNumber);
+                return `
+                                                <div class="passenger-card">
+                                                    <div>${passenger.title} ${passenger.firstName} ${passenger.lastName}</div>
+                                                    ${ticket ? `
+                                                        <div class="ticket-details">
+                                                            <div>Ticket: ${ticket.ticketNumber}</div>
+                                                            <div>Issue Date: ${new Date(ticket.issueDate).toLocaleDateString()}</div>
+                                                            <div>Fare Amount: £${ticket.fareAmount.toFixed(2)}</div>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `;
+            }).join('');
+
+            // Display contact details
+            const contactDetails = document.getElementById('contactDetails');
+            contactDetails.innerHTML = `
+                                            <div>
+                                                ${booking.contact.phoneNumber ? `<div>Phone: ${booking.contact.phoneNumber}</div>` : ''}
+                                                ${booking.contact.emailAddress ? `<div>Email: ${booking.contact.emailAddress}</div>` : ''}
+                                            </div>
+                                        `;
+        }
+
+        async function login() {
+            hideError();
+            const recordLocator = document.getElementById('recordLocator').value.toUpperCase();
+            const lastName = document.getElementById('lastName').value.toUpperCase();
+
+            if (!recordLocator || !lastName) {
+                showError('Please enter both booking reference and last name');
+                return;
+            }
+
+            if (recordLocator.length !== 6) {
+                showError('Booking reference must be 6 characters');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('http://localhost:7009/api/order/retrieve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recordLocator: recordLocator,
+                        lastName: lastName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || 'Unable to retrieve booking');
+                }
+
+                displayBooking(data);
+            } catch (error) {
+                hideLoading();
+                showError(error.message);
+            }
+        }
+
+        function logout() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('bookingDetails').style.display = 'none';
+            document.getElementById('recordLocator').value = '';
+            document.getElementById('lastName').value = '';
+            hideError();
+        }
+
+    </script>
+</body>
+</html>

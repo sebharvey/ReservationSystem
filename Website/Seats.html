@@ -1,0 +1,756 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Seats</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+
+        .cabin {
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .cabin-header {
+            padding: 15px;
+            background: #f8f8f8;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+            .cabin-header h3 {
+                margin: 0;
+                font-size: 16px;
+                color: #333;
+            }
+
+            .cabin-header.booked {
+                background: #e8f5e9;
+                border-left: 4px solid #4CAF50;
+            }
+
+        .cabin-content {
+            padding: 20px;
+            display: none;
+        }
+
+            .cabin-content.expanded {
+                display: block;
+            }
+
+        .expand-icon {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+        }
+
+            .expand-icon.expanded {
+                transform: rotate(180deg);
+            }
+
+        .row {
+            display: flex;
+            justify-content: center;
+            margin: 5px 0;
+            gap: 4px;
+        }
+
+        .row-number {
+            width: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .seat {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            background: white;
+        }
+
+            .seat.selected {
+                background: #4CAF50;
+                border-color: #45a049;
+                color: white;
+            }
+
+            .seat.unavailable {
+                background: #e0e0e0;
+                cursor: not-allowed;
+                color: #999;
+            }
+
+            .seat.aisle {
+                margin: 0 10px;
+            }
+
+            .seat.exit {
+                border-color: #ff9800;
+            }
+
+            .seat.bulkhead {
+                border-style: dashed;
+            }
+
+            .seat.window {
+                background: #f5f5f5;
+            }
+
+                .seat.selected,
+                .seat.window.selected {
+                    background: #4CAF50;
+                    border-color: #45a049;
+                    color: white;
+                }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 10px;
+            background: #fff;
+            border-radius: 4px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .error {
+            color: #e31837;
+            padding: 10px;
+            background: #ffe6e6;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .done-button {
+            background: #2e8b57;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .done-button:hover {
+                background: #236b43;
+            }
+
+            .done-button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+
+        .seat-counter {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .cabin-status {
+            font-size: 14px;
+            color: #666;
+        }
+
+            .cabin-status.booked {
+                color: #2e7d32;
+                font-weight: 500;
+            }
+
+        .passenger-selector {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .passenger-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 4px;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+
+            .passenger-card.active {
+                background: #e3f2fd;
+                border: 2px solid #2196f3;
+            }
+
+            .passenger-card .name {
+                font-weight: 500;
+            }
+
+            .passenger-card .seat-info {
+                margin-left: auto;
+                color: #666;
+            }
+
+        .seat.selected {
+            position: relative;
+        }
+
+            .seat.selected::after {
+                content: attr(data-passenger);
+                position: absolute;
+                bottom: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                white-space: nowrap;
+                color: #333;
+            }
+
+        .passenger-selector {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <script>
+        fetch('Header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+            });
+    </script>
+    <h2>Select Seats</h2>
+
+    <div class="container">
+        <div class="form-group">
+            <label for="flightSelect">Select Flight:</label>
+            <select id="flightSelect">
+                <option value="">Select a flight...</option>
+            </select>
+        </div>
+
+        <div id="loading" class="loading">Loading seat map...</div>
+        <div id="error" class="error"></div>
+
+        <div id="passenger-selector" class="passenger-selector">
+            <h3>Select seats for each passenger</h3>
+            <div id="passenger-list"></div>
+        </div>
+
+        <div id="seat-counter" class="seat-counter">
+            Selected seats: <span id="selected-count">0</span> of <span id="required-seats">0</span>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background: white;"></div>
+                Available
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #4CAF50; border-color: #45a049;"></div>
+                Selected
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #e0e0e0;"></div>
+                Unavailable
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="border-color: #ff9800;"></div>
+                Exit Row
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="border-style: dashed;"></div>
+                Bulkhead
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #f5f5f5;"></div>
+                Window
+            </div>
+        </div>
+
+        <div id="seatmap"></div>
+
+        <div class="actions">
+            <button id="done-button" class="done-button" onclick="handleDone()">Done</button>
+        </div>
+    </div>
+
+<script>
+
+        let currentBookingClass = null;
+        let currentOfferId = null;
+        let segments = null;
+        let passengers = [];
+        let currentPassenger = null;
+        let currentSeatmapData = null;
+
+        // Format: Map<offerId, Map<passengerId, seatNumber>>
+        let selectedSeats = new Map();
+
+        const cabinCodes = {
+            'J': 'Upper Class',
+            'W': 'Premium',
+            'Y': 'Economy'
+        };
+
+        async function loadFlightSummary() {
+            const storedBasket = localStorage.getItem('flightBasket');
+            if (!storedBasket) {
+                showError('No flight selection found in basket');
+                return;
+            }
+
+            const basket = JSON.parse(storedBasket);
+            passengers = basket.passengers;
+
+            // Initialize seat selection structure from stored basket
+            selectedSeats = new Map();
+            if (basket.seats && Array.isArray(basket.seats)) {
+                basket.seats.forEach(seatAssignment => {
+                    if (!selectedSeats.has(seatAssignment.offerId)) {
+                        selectedSeats.set(seatAssignment.offerId, new Map());
+                    }
+                    const flightSeats = selectedSeats.get(seatAssignment.offerId);
+                    flightSeats.set(seatAssignment.passenger - 1, seatAssignment.seat);
+                });
+            }
+
+            // Set first passenger as current
+            currentPassenger = passengers[0];
+
+            const offerIds = [];
+            if (basket.outboundOfferId) offerIds.push(basket.outboundOfferId);
+            if (basket.inboundOfferId) offerIds.push(basket.inboundOfferId);
+
+            if (offerIds.length === 0) {
+                showError('No offer IDs found in basket');
+                return;
+            }
+
+            try {
+                const loadingElement = document.getElementById('loading');
+                loadingElement.style.display = 'block';
+
+                const response = await fetch('http://localhost:7009/api/offer/summary', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ OfferIds: offerIds })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                segments = data.segments;
+                populateDropdown(); // This will now auto-select first segment and show passenger selector
+
+                loadingElement.style.display = 'none';
+            } catch (error) {
+                showError('Error loading flight summary: ' + error.message);
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        function renderPassengerSelector() {
+            const container = document.getElementById('passenger-list');
+            container.innerHTML = '';
+
+            passengers.forEach((passenger, index) => {
+                const card = document.createElement('div');
+                card.className = 'passenger-card';
+                if (passenger === currentPassenger) {
+                    card.classList.add('active');
+                }
+
+                const getCurrentSeat = () => {
+                    if (!currentOfferId) return null;
+                    const flightSeats = selectedSeats.get(currentOfferId);
+                    return flightSeats ? flightSeats.get(index) : null;
+                };
+
+                card.innerHTML = `
+                            <div class="name">${passenger.firstName.toUpperCase()} ${passenger.lastName.toUpperCase()}</div>
+                            <div class="seat-info">${getCurrentSeat() || 'No seat selected'}</div>
+                        `;
+
+                card.addEventListener('click', () => {
+                    currentPassenger = passenger;
+                    document.querySelectorAll('.passenger-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                });
+
+                container.appendChild(card);
+            });
+
+            // Update seat counter
+            updateSeatCounter();
+        }
+
+        function updateSeatCounter() {
+            const seatCounter = document.getElementById('seat-counter');
+            const selectedCountElement = document.getElementById('selected-count');
+            const requiredSeatsElement = document.getElementById('required-seats');
+
+            const flightSeats = selectedSeats.get(currentOfferId);
+            const selectedCount = flightSeats ? flightSeats.size : 0;
+            const requiredSeats = passengers.length;
+
+            selectedCountElement.textContent = selectedCount;
+            requiredSeatsElement.textContent = requiredSeats;
+            seatCounter.style.display = 'block';
+        }
+
+        function populateDropdown() {
+            const select = document.getElementById('flightSelect');
+            select.innerHTML = '';
+
+            segments.forEach(segment => {
+                const option = document.createElement('option');
+                option.value = segment.offerId;
+                option.textContent = `${segment.flightNumber} - ${formatDate(segment.departureDate)} - ${cabinCodes[segment.bookingClass] || segment.bookingClass}`;
+                select.appendChild(option);
+            });
+
+            // Auto-select first segment
+            if (segments.length > 0) {
+                const firstSegment = segments[0];
+                select.value = firstSegment.offerId;
+                currentOfferId = firstSegment.offerId;
+                loadSeatMap(firstSegment.offerId);
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        async function loadSeatMap(offerId) {
+            try {
+                const loadingElement = document.getElementById('loading');
+                loadingElement.style.display = 'block';
+
+                const selectedSegment = segments.find(s => s.offerId === offerId);
+                if (!selectedSegment) {
+                    throw new Error('Selected flight not found in segments data');
+                }
+
+                const response = await fetch('http://localhost:7009/api/seat/seatmap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        flightNumber: selectedSegment.flightNumber,
+                        departureDate: selectedSegment.departureDate
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const seatmapData = await response.json();
+                renderSeatMap(seatmapData);
+
+                // Show and render passenger selector after seat map is loaded
+                const passengerSelector = document.getElementById('passenger-selector');
+                passengerSelector.style.display = 'block';
+                renderPassengerSelector();
+
+                // Show seat counter
+                const seatCounter = document.getElementById('seat-counter');
+                seatCounter.style.display = 'block';
+
+                loadingElement.style.display = 'none';
+            } catch (error) {
+                showError('Error loading seat map: ' + error.message);
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        function renderSeatMap(seatmapData) {
+            currentSeatmapData = seatmapData;
+            const seatmapContainer = document.getElementById('seatmap');
+            seatmapContainer.innerHTML = '';
+
+            const selectedSegment = segments.find(s => s.offerId === currentOfferId);
+            const currentCabinCode = selectedSegment ? selectedSegment.bookingClass : null;
+
+            seatmapData.cabins.forEach(cabin => {
+                const cabinDiv = document.createElement('div');
+                cabinDiv.className = 'cabin';
+
+                const cabinHeader = document.createElement('div');
+                cabinHeader.className = 'cabin-header';
+                if (cabin.cabinCode === currentCabinCode) {
+                    cabinHeader.classList.add('booked');
+                }
+
+                const headerContent = document.createElement('div');
+                headerContent.style.display = 'flex';
+                headerContent.style.justifyContent = 'space-between';
+                headerContent.style.width = '100%';
+
+                const title = document.createElement('h3');
+                title.textContent = cabin.cabinName;
+
+                const status = document.createElement('span');
+                status.className = 'cabin-status';
+                status.textContent = cabin.cabinCode === currentCabinCode ? '(Your selected cabin)' : '';
+                if (cabin.cabinCode === currentCabinCode) {
+                    status.classList.add('booked');
+                }
+
+                headerContent.appendChild(title);
+                headerContent.appendChild(status);
+
+                const expandIcon = document.createElement('span');
+                expandIcon.className = 'expand-icon';
+                expandIcon.innerHTML = '▼';
+
+                cabinHeader.appendChild(headerContent);
+                cabinHeader.appendChild(expandIcon);
+
+                const cabinContent = document.createElement('div');
+                cabinContent.className = 'cabin-content';
+                if (cabin.cabinCode === currentCabinCode) {
+                    cabinContent.classList.add('expanded');
+                    expandIcon.classList.add('expanded');
+                }
+
+                cabin.rows.forEach(row => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'row';
+
+                    const rowNumber = document.createElement('div');
+                    rowNumber.className = 'row-number';
+                    rowNumber.textContent = row.rowNumber;
+                    rowDiv.appendChild(rowNumber);
+
+                    row.seats.forEach(seat => {
+                        const seatButton = document.createElement('button');
+                        seatButton.className = 'seat';
+                        seatButton.textContent = seat.seatNumber;
+
+                        if (!seat.isAvailable) seatButton.classList.add('unavailable');
+                        if (seat.isAisle) seatButton.classList.add('aisle');
+                        if (seat.isExit) seatButton.classList.add('exit');
+                        if (seat.isBulkhead) seatButton.classList.add('bulkhead');
+                        if (seat.isWindow) seatButton.classList.add('window');
+
+                        // Check if seat is selected by any passenger
+                        if (selectedSeats.has(currentOfferId)) {
+                            const flightSeats = selectedSeats.get(currentOfferId);
+                            for (const [passengerIndex, selectedSeatNumber] of flightSeats.entries()) {
+                                if (selectedSeatNumber === seat.seatNumber) {
+                                    seatButton.classList.add('selected');
+                                    const passenger = passengers[passengerIndex];
+                                    seatButton.setAttribute('data-passenger',
+                                        `${passenger.firstName.charAt(0)}${passenger.lastName.charAt(0)}`);
+                                }
+                            }
+                        }
+
+                        if (seat.isAvailable && cabin.cabinCode === currentCabinCode) {
+                            seatButton.addEventListener('click', () => handleSeatSelection(seat.seatNumber, cabin.cabinCode));
+                        }
+
+                        rowDiv.appendChild(seatButton);
+                    });
+
+                    cabinContent.appendChild(rowDiv);
+                });
+
+                cabinHeader.addEventListener('click', () => {
+                    cabinContent.classList.toggle('expanded');
+                    expandIcon.classList.toggle('expanded');
+                });
+
+                cabinDiv.appendChild(cabinHeader);
+                cabinDiv.appendChild(cabinContent);
+                seatmapContainer.appendChild(cabinDiv);
+            });
+
+            updateSeatCounter();
+        }
+
+        function handleSeatSelection(seatNumber, cabinCode) {
+            if (!currentPassenger) {
+                showError('Please select a passenger first');
+                return;
+            }
+
+            const passengerIndex = passengers.indexOf(currentPassenger);
+
+            // Initialize flight seats if needed
+            if (!selectedSeats.has(currentOfferId)) {
+                selectedSeats.set(currentOfferId, new Map());
+            }
+            const flightSeats = selectedSeats.get(currentOfferId);
+
+            // Check if seat is already taken by another passenger
+            for (const [existingPassengerIndex, existingSeat] of flightSeats.entries()) {
+                if (existingSeat === seatNumber && existingPassengerIndex !== passengerIndex) {
+                    showError('This seat is already assigned to another passenger');
+                    return;
+                }
+            }
+
+            // Handle seat selection/deselection
+            if (flightSeats.get(passengerIndex) === seatNumber) {
+                flightSeats.delete(passengerIndex);
+            } else {
+                flightSeats.set(passengerIndex, seatNumber);
+            }
+
+            updateBasket();
+            renderSeatMap(currentSeatmapData);
+            renderPassengerSelector();
+        }
+
+
+        function updateBasket() {
+            const storedBasket = localStorage.getItem('flightBasket');
+            if (!storedBasket) return;
+
+            const basket = JSON.parse(storedBasket);
+
+            // Convert selectedSeats Map to array format
+            const seatsArray = [];
+
+            for (const [offerId, passengerSeats] of selectedSeats) {
+                for (const [passengerIndex, seatNumber] of passengerSeats) {
+                    seatsArray.push({
+                        offerId: offerId,
+                        passenger: passengerIndex + 1, // Converting to 1-based index
+                        seat: seatNumber
+                    });
+                }
+            }
+
+            basket.seats = seatsArray;
+            localStorage.setItem('flightBasket', JSON.stringify(basket));
+        }
+
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function handleDone() {
+
+            const allFlights = Array.from(selectedSeats.keys());
+            let allPassengersSeated = true;
+
+            allFlights.forEach(offerId => {
+                const flightSeats = selectedSeats.get(offerId);
+                if (!flightSeats || flightSeats.size < passengers.length) {
+                    allPassengersSeated = false;
+                }
+            });
+
+            if (!allPassengersSeated) {
+                showError('Please select seats for all passengers before continuing');
+                return;
+            }
+
+            let basket = JSON.parse(localStorage.getItem("flightBasket"));
+            console.log('Debug - final basket:', JSON.stringify(basket, null, 2));
+
+            window.location.href = 'Details.html';
+        }
+
+
+        // Event Listeners
+        document.getElementById('flightSelect').addEventListener('change', function (e) {
+            if (e.target.value) {
+                currentOfferId = e.target.value;
+                loadSeatMap(currentOfferId);
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadFlightSummary);
+
+    </script>
+</body>
+</html>
