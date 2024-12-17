@@ -13,6 +13,92 @@ A comprehensive airline reservation system that provides both a traditional cryp
 - Flight status tracking
 - Payment processing
 
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        CLI[Command Line Interface]
+        REST[REST API Clients]
+    end
+
+    subgraph "API Layer"
+        CMD[Command Controller]
+        OFR[Offer Controller]
+        ORD[Order Controller]
+        CHK[Check-in Controller]
+        SEAT[Seat Controller]
+    end
+
+    subgraph "Application Layer"
+        RS[Reservation System]
+        RC[Reservation Commands]
+        PNR[PNR Service]
+        INV[Inventory Service]
+        FARE[Fare Service]
+        TKT[Ticketing Service]
+        SEAT_SVC[Seat Service]
+        CHK_SVC[Check-in Service]
+    end
+
+    subgraph "Domain Layer"
+        PNR_ENT[PNR]
+        INV_ENT[Inventory]
+        FARE_ENT[Fares]
+        TKT_ENT[Tickets]
+        SEAT_ENT[Seat Maps]
+    end
+
+    subgraph "Infrastructure Layer"
+        PNR_REPO[PNR Repository]
+        INV_REPO[Inventory Repository]
+        FARE_REPO[Fare Repository]
+        AUTH[Authentication]
+        PAY[Payment Service]
+        APIS[APIS Service]
+    end
+
+    %% Client to API connections
+    CLI --> CMD
+    REST --> OFR & ORD & CHK & SEAT
+
+    %% API to Application connections
+    CMD --> RS
+    OFR --> RS
+    ORD --> RS
+    CHK --> CHK_SVC
+    SEAT --> SEAT_SVC
+
+    %% Application interconnections
+    RS --> RC
+    RC --> PNR & INV & FARE & TKT & SEAT_SVC & CHK_SVC
+
+    %% Application to Domain connections
+    PNR --> PNR_ENT
+    INV --> INV_ENT
+    FARE --> FARE_ENT
+    TKT --> TKT_ENT
+    SEAT_SVC --> SEAT_ENT
+
+    %% Domain to Infrastructure connections
+    PNR_ENT --> PNR_REPO
+    INV_ENT --> INV_REPO
+    FARE_ENT --> FARE_REPO
+    
+    %% External service connections
+    RC -.-> AUTH
+    RC -.-> PAY
+    CHK_SVC -.-> APIS
+```
+
+The system follows a layered architecture pattern:
+
+- **Client Layer**: Handles user interactions through both command-line and REST interfaces
+- **API Layer**: Exposes functionality through controllers for different business domains
+- **Application Layer**: Contains core business logic and service implementations
+- **Domain Layer**: Defines the business entities and rules
+- **Infrastructure Layer**: Manages data persistence and external service integrations
+
 ## Architecture
 
 The solution is organized into several key projects:
