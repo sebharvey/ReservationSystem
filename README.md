@@ -2,6 +2,16 @@
 
 A comprehensive airline reservation system that provides both a traditional cryptic command interface (similar to Amadeus/Sabre) and a modern REST API. The system handles flight bookings, check-in, seat assignments, fare management, and more.
 
+## Hisory of Airline Reservation Systems (OOMS)
+
+Offer and Order Management Systems (OOMS) represent a fundamental shift from traditional Passenger Service Systems (PSS) in the airline industry. While PSS platforms have been the backbone of airline operations since the 1960s, beginning with systems like SABRE, they were built around rigid, standardized processes that worked well in a regulated environment where fares were filed centrally and routes were strictly controlled. These legacy systems were designed around the concept of PNRs (Passenger Name Records) and booking classes, reflecting the technology limitations and business needs of their era.
+
+The transition to OOMS was driven by several factors including airline deregulation, the rise of low-cost carriers, growing importance of ancillary revenue, and increasing customer expectations for personalization. OMS moves away from PNR-based records to order-based management, enabling dynamic pricing, personalized offers, and continuous pricing instead of traditional booking class inventory. This shift is supported by modern technology architecture including microservices, cloud-native infrastructure, and API-first approaches that enable real-time operations and flexible integration capabilities.
+
+The benefits of OOMS are substantial, including enhanced revenue optimization through dynamic pricing and personalized bundling, improved customer experience across channels, and increased operational efficiency. Airlines can now respond more quickly to market changes, introduce new products faster, and better manage their inventory in real-time. The technical architecture also reduces system complexity and technical debt while improving scalability and reliability.
+
+The industry's transition to OMS began around 2015 with initial NDC (New Distribution Capability) implementation and basic offer management capabilities. This evolved through the late 2010s with enhanced dynamic pricing and full order management implementation, leading to today's advanced systems that support complete personalization and dynamic pricing. While the transformation presents challenges in terms of implementation complexity and industry-wide adoption, it represents a crucial evolution in airline retail that better serves modern customer expectations while optimizing airline revenue and operations.
+
 ## Features
 
 - Flight search and availability
