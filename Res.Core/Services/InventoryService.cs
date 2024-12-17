@@ -28,6 +28,17 @@ namespace Res.Core.Services
                     flight.To == request.Destination &&
                     flight.DepartureDate == request.DepartureDate)
                 .ToList();
+    
+            // Filter out past flights if searching for today
+            if (request.DepartureDate == DateTime.Now.ToString("ddMMM"))
+            {
+                var currentTime = DateTime.Now.TimeOfDay;
+                availableFlights = availableFlights.Where(flight => 
+                {
+                    var flightTime = TimeSpan.ParseExact(flight.DepartureTime, "hhmm", CultureInfo.InvariantCulture);
+                    return flightTime >= currentTime;
+                }).ToList();
+            }
 
             if (request.PreferredTime != null)
             {
