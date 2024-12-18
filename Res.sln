@@ -27,12 +27,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Res.Api", "Res.Api\Res.Api.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Website", "Website", "{20800366-54FC-4083-8A28-963BE43D375C}"
 	ProjectSection(SolutionItems) = preProject
-		Website\Bookflow.html = Website\Bookflow.html
 		Website\Booking.html = Website\Booking.html
 		Website\CheckIn.html = Website\CheckIn.html
 		Website\Details.html = Website\Details.html
 		Website\Header.html = Website\Header.html
 		Website\Order.html = Website\Order.html
+		Website\index.html = Website\index.html
 		Website\Seats.html = Website\Seats.html
 		Website\Status.html = Website\Status.html
 		Website\Terminal.html = Website\Terminal.html
