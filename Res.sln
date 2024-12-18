@@ -32,6 +32,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Website", "Website", "{2080
 		Website\CheckIn.html = Website\CheckIn.html
 		Website\Details.html = Website\Details.html
 		Website\Header.html = Website\Header.html
+		Website\Index.html = Website\Index.html
 		Website\Order.html = Website\Order.html
 		Website\Seats.html = Website\Seats.html
 		Website\Status.html = Website\Status.html
