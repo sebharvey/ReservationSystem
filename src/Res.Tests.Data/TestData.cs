@@ -63,215 +63,118 @@ namespace Res.Tests.Data
 
         public void Initialize(bool includePnrs = true)
         {
-            // Create users
-            _userRepository.Users.Add(new User { UserId = "SH", Password = "123" });
-            _userRepository.Users.Add(new User { UserId = "KP", Password = "123" });
-
-            // Add main VS routes with multiple frequencies
-            List<(string from, string to, string[] times)> vsRoutes = new()
+            try
             {
-                // London - New York (6 daily)
-                ("LHR", "JFK", new[] { "0900", "1100", "1300", "1500", "1700", "1900" }),
-                ("JFK", "LHR", new[] { "1830", "2030", "2230", "0030", "0230", "0430" }),
+                // Create users
+                _userRepository.Users.Add(new User { UserId = "SH", Password = "123" });
+                _userRepository.Users.Add(new User { UserId = "KP", Password = "123" });
 
-                // London - Los Angeles (4 daily)
-                ("LHR", "LAX", new[] { "1000", "1400", "1600", "2000" }),
-                ("LAX", "LHR", new[] { "1530", "1930", "2130", "2330" }),
-
-                // London - Miami (3 daily)
-                ("LHR", "MIA", new[] { "0930", "1330", "1730" }),
-                ("MIA", "LHR", new[] { "1630", "2030", "2330" }),
-
-                // London - Boston (3 daily)
-                ("LHR", "BOS", new[] { "0830", "1230", "1630" }),
-                ("BOS", "LHR", new[] { "1530", "1930", "2230" }),
-
-                // London - San Francisco (3 daily)
-                ("LHR", "SFO", new[] { "1030", "1430", "1830" }),
-                ("SFO", "LHR", new[] { "1630", "2030", "2330" }),
-
-                // London - Washington (3 daily)
-                ("LHR", "IAD", new[] { "1130", "1530", "1930" }),
-                ("IAD", "LHR", new[] { "1730", "2130", "0030" }),
-
-                // London - Atlanta (2 daily)
-                ("LHR", "ATL", new[] { "1030", "1630" }),
-                ("ATL", "LHR", new[] { "1730", "2330" }),
-
-                // London - Las Vegas (2 daily)
-                ("LHR", "LAS", new[] { "1130", "1730" }),
-                ("LAS", "LHR", new[] { "1830", "0030" }),
-
-                // London - Orlando (2 daily)
-                ("LHR", "MCO", new[] { "1030", "1530" }),
-                ("MCO", "LHR", new[] { "1730", "2230" }),
-
-                // London - Delhi (2 daily)
-                ("LHR", "DEL", new[] { "2130", "2330" }),
-                ("DEL", "LHR", new[] { "0430", "0630" }),
-
-                // London - Mumbai (2 daily)
-                ("LHR", "BOM", new[] { "2230", "0030" }),
-                ("BOM", "LHR", new[] { "0530", "0730" }),
-
-                // London - Shanghai (1 daily)
-                ("LHR", "PVG", new[] { "2230" }),
-                ("PVG", "LHR", new[] { "0530" }),
-
-                // London - Hong Kong (2 daily)
-                ("LHR", "HKG", new[] { "2130", "2330" }),
-                ("HKG", "LHR", new[] { "0430", "0630" }),
-
-                // London - Johannesburg (2 daily)
-                ("LHR", "JNB", new[] { "2130", "2330" }),
-                ("JNB", "LHR", new[] { "0430", "0630" }),
-
-                // Manchester - Orlando (2 daily)
-                ("MAN", "MCO", new[] { "1030", "1430" }),
-                ("MCO", "MAN", new[] { "1730", "2130" }),
-
-                // Manchester - Atlanta (1 daily)
-                ("MAN", "ATL", new[] { "1130" }),
-                ("ATL", "MAN", new[] { "1830" })
-            };
-
-            Dictionary<(string from, string to), string> routeAircraft = new()
-            {
-                // Trans-Atlantic routes
-                { ("LHR", "JFK"), "789" }, // Boeing 787-9
-                { ("JFK", "LHR"), "789" },
-                { ("LHR", "LAX"), "351" }, // Airbus A350-900
-                { ("LAX", "LHR"), "351" },
-                { ("LHR", "MIA"), "333" }, // Airbus A330-300
-                { ("MIA", "LHR"), "333" },
-                { ("LHR", "BOS"), "333" },
-                { ("BOS", "LHR"), "333" },
-                { ("LHR", "SFO"), "789" },
-                { ("SFO", "LHR"), "789" },
-                { ("LHR", "IAD"), "351" },
-                { ("IAD", "LHR"), "351" },
-
-                // Asia routes
-                { ("LHR", "DEL"), "351" },
-                { ("DEL", "LHR"), "351" },
-                { ("LHR", "BOM"), "789" },
-                { ("BOM", "LHR"), "789" },
-                { ("LHR", "PVG"), "351" },
-                { ("PVG", "LHR"), "351" },
-                { ("LHR", "HKG"), "351" },
-                { ("HKG", "LHR"), "351" },
-
-                // Other long-haul
-                { ("LHR", "JNB"), "789" },
-                { ("JNB", "LHR"), "789" },
-
-                // Default routes use 333
-                { ("LHR", "ATL"), "333" },
-                { ("ATL", "LHR"), "333" },
-                { ("LHR", "LAS"), "333" },
-                { ("LAS", "LHR"), "333" },
-                { ("LHR", "MCO"), "333" },
-                { ("MCO", "LHR"), "333" },
-                { ("MAN", "MCO"), "333" },
-                { ("MCO", "MAN"), "333" },
-                { ("MAN", "ATL"), "333" },
-                { ("ATL", "MAN"), "333" }
-            };
-
-            for (int day = 0; day < 331; day++)
-            {
-                int flightNumberCounter = 1; // Start after VS010
-
-                foreach (var route in vsRoutes)
+                // Load flight data from CSV
+                var flightDataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Res.Tests.Data", "Data", "FlightData.csv");
+                if (!File.Exists(flightDataPath))
                 {
-                    foreach (var departureTime in route.times)
+                    throw new FileNotFoundException($"Flight data file not found at: {flightDataPath}");
+                }
+
+                var flightData = FlightDataHelper.LoadFlightData(flightDataPath);
+
+                // Load seat configurations
+                _seatMapRepository.SeatConfigurations = SeatConfigurationLoader.LoadSeatConfigurations();
+
+                // Calculate date range
+                var startDate = DateTime.Today;
+                const int daysToGenerate = 331;
+
+                foreach (var flight in flightData)
+                {
+                    if (!FlightDataHelper.ValidateFrequencyString(flight.Freq))
                     {
-                        // Calculate arrival time and date based on route duration and departure time
-                        TimeSpan departureTimeSpan = TimeSpan.ParseExact(departureTime, "hhmm", CultureInfo.InvariantCulture);
+                        Debug.WriteLine($"Warning: Invalid frequency string '{flight.Freq}' for flight {flight.FlightNo}");
+                        continue;
+                    }
 
-                        int durationHours = (route.from, route.to) switch
+                    // Validate aircraft type exists in configuration
+                    if (!_seatMapRepository.SeatConfigurations.ContainsKey(flight.AircraftType))
+                    {
+                        Debug.WriteLine($"Warning: No seat configuration found for aircraft type '{flight.AircraftType}' for flight {flight.FlightNo}");
+                        continue;
+                    }
+
+                    // Get operating dates based on frequency
+                    var operatingDates = FlightDataHelper.GetOperatingDates(flight.Freq, startDate, daysToGenerate);
+
+                    foreach (var operatingDate in operatingDates)
+                    {
+                        // Calculate arrival date/time
+                        var departureDateTime = operatingDate.Date.Add(flight.Dep.ToTimeSpan());
+                        var arrivalDateTime = operatingDate.Date.Add(flight.Arr.ToTimeSpan());
+
+                        // If arrival time is before departure time, it must be next day
+                        if (arrivalDateTime < departureDateTime)
                         {
-                            ("LHR", "JFK") or ("JFK", "LHR") => 7,
-                            ("LHR", "LAX") or ("LAX", "LHR") => 11,
-                            ("LHR", "MIA") or ("MIA", "LHR") => 9,
-                            ("LHR", "BOS") or ("BOS", "LHR") => 7,
-                            ("LHR", "SFO") or ("SFO", "LHR") => 11,
-                            ("LHR", "IAD") or ("IAD", "LHR") => 8,
-                            ("LHR", "ATL") or ("ATL", "LHR") => 9,
-                            ("LHR", "LAS") or ("LAS", "LHR") => 11,
-                            ("LHR", "MCO") or ("MCO", "LHR") => 9,
-                            ("LHR", "DEL") or ("DEL", "LHR") => 8,
-                            ("LHR", "BOM") or ("BOM", "LHR") => 9,
-                            ("LHR", "PVG") or ("PVG", "LHR") => 11,
-                            ("LHR", "HKG") or ("HKG", "LHR") => 12,
-                            ("LHR", "JNB") or ("JNB", "LHR") => 11,
-                            ("MAN", "MCO") or ("MCO", "MAN") => 9,
-                            ("MAN", "ATL") or ("ATL", "MAN") => 9,
-                            _ => 8 // Default duration
-                        };
+                            arrivalDateTime = arrivalDateTime.AddDays(1);
+                        }
 
-                        DateTime baseDate = DateTime.Today.AddDays(day);
-                        DateTime departureDateTime = baseDate.Add(departureTimeSpan);
-                        DateTime arrivalDateTime = departureDateTime.AddHours(durationHours);
-
-                        string arrivalDate = arrivalDateTime.ToString("ddMMM").ToUpper();
-                        string arrivalTime = arrivalDateTime.ToString("HHmm");
-
-                        // Create flight number
-                        string flightNo = $"VS{flightNumberCounter:D03}";
-
-                        // Get the aircraft type for this route
-                        string aircraftType = routeAircraft.TryGetValue((route.from, route.to), out string aircraft) ? aircraft : "333";
-
-                        // Get the seat configuration for this aircraft type
-                        var seatConfig = _aircraftConfigs[aircraftType];
+                        // Get seat capacities from configuration
+                        var seatConfig = _seatMapRepository.SeatConfigurations[flight.AircraftType];
+                        var seats = new Dictionary<string, int>();
+                        foreach (var cabin in seatConfig.Cabins)
+                        {
+                            var seatCount = CalculateCabinCapacity(cabin.Value);
+                            seats[cabin.Key] = seatCount;
+                        }
 
                         _newFlights.Add(new FlightInventory
                         {
-                            FlightNo = flightNo,
-                            From = route.from,
-                            To = route.to,
-                            DepartureDate = baseDate.ToString("ddMMM").ToUpper(),
-                            ArrivalDate = arrivalDate,
-                            DepartureTime = departureTime,
-                            ArrivalTime = arrivalTime,
-                            AircraftType = aircraftType,
-                            Seats = new Dictionary<string, int>(seatConfig) // Use the correct seat configuration
+                            FlightNo = flight.FlightNo,
+                            From = flight.Origin,
+                            To = flight.Dest,
+                            DepartureDate = departureDateTime.ToString("ddMMM").ToUpper(),
+                            ArrivalDate = arrivalDateTime.ToString("ddMMM").ToUpper(),
+                            DepartureTime = flight.Dep.ToString("HHmm"),
+                            ArrivalTime = flight.Arr.ToString("HHmm"),
+                            AircraftType = flight.AircraftType,
+                            Seats = seats
                         });
-
-                        flightNumberCounter++;
                     }
                 }
-            }
 
-            // Add the new flights to the existing list
-            foreach (var flight in _newFlights)
+                // Add the new flights to the existing list
+                foreach (var flight in _newFlights)
+                {
+                    _inventoryService.AddFlight(
+                        flight.FlightNo,
+                        flight.From,
+                        flight.To,
+                        flight.DepartureDate,
+                        flight.ArrivalDate,
+                        flight.DepartureTime,
+                        flight.ArrivalTime,
+                        flight.Seats,
+                        flight.AircraftType);
+                }
+
+                Debug.WriteLine($"{_newFlights.Count} test flight records created");
+
+                if (!includePnrs)
+                    return;
+
+                // login 
+                var loginResponse = _userService.Authenticate("SH", "123");
+                _token = loginResponse.Token;
+
+                // Create test PNRs
+                CreateTestPnrs();
+            }
+            catch (Exception ex)
             {
-                _inventoryService.AddFlight(
-                    flight.FlightNo,
-                    flight.From,
-                    flight.To,
-                    flight.DepartureDate,
-                    flight.ArrivalDate,
-                    flight.DepartureTime,
-                    flight.ArrivalTime,
-                    flight.Seats,
-                    flight.AircraftType);
+                Debug.WriteLine($"Error initializing test data: {ex.Message}");
+                throw;
             }
+        }
 
-            Debug.WriteLine($"{_newFlights.Count} test flight records created");
-
-            // Initialize seat configurations
-            _seatMapRepository.SeatConfigurations = InitializeSeatConfigurations();
-
-            if (!includePnrs)
-                return;
-
-            // login 
-            var loginResponse = _userService.Authenticate("SH", "123");
-
-            _token = loginResponse.Token;
-
+        private void CreateTestPnrs()
+        {
             // Create some PNRs
             CreatePnr(_reservationSystem, new List<string>
             {
@@ -344,7 +247,7 @@ namespace Res.Tests.Data
             {
                 "NM1DIMITRIOU/DIMITRI MR",
                 "NM1DIMITRIOU/LOUISA MRS",
-                FindFlightAndGenerateLongSellCommand("VS001",3, "J"), // Select the next VS001 flight (specific flight)
+                FindFlightAndGenerateLongSellCommand("VS003",3, "J"), // Select the next VS003 flight (specific flight)
                 FindFlightAndGenerateLongSellCommand(3, "J", "JFK", "LHR", DateTime.Today.AddDays(7).ToString("ddMMM").ToUpper()),
                 "CTCP 0727777777",
                 "TLTL08MAY",
@@ -367,8 +270,8 @@ namespace Res.Tests.Data
                 "SRDOCA HK1/P1/R/GBR/123 HIGH STREET/LONDON/GB/W1A 1AA",                 // Add address info for first pax  - required for APIS info
                 "SRDOCA HK1/P2/R/GBR/123 HIGH STREET/LONDON/GB/W1A 1AA",                 // Add address info for second pax - required for APIS info
                 "ER",
-                "CKIN {PNR}/P1/VS001",
-                "CKIN {PNR}/P2/VS001",
+                "CKIN {PNR}/P1/VS003",
+                "CKIN {PNR}/P2/VS003",
                 "IG",
             });
 
@@ -376,7 +279,7 @@ namespace Res.Tests.Data
             {
                 "NM1HARVEY/SEB MR",
                 "NM1HARVEY/CLAIRE MRS",
-                FindFlightAndGenerateLongSellCommand("VS001",3, "J"), // Select the next VS001 flight (specific flight)
+                FindFlightAndGenerateLongSellCommand("VS003",3, "J"), // Select the next VS003 flight (specific flight)
                 FindFlightAndGenerateLongSellCommand(3, "J", "JFK", "LHR", DateTime.Today.AddDays(7).ToString("ddMMM").ToUpper()),
                 "CTCP 0727777777",
                 "TLTL08MAY",
@@ -389,327 +292,20 @@ namespace Res.Tests.Data
             });
         }
 
-        public Dictionary<string, SeatConfiguration> InitializeSeatConfigurations()
+        private int CalculateCabinCapacity(CabinConfiguration cabin)
         {
-            var configs = new Dictionary<string, SeatConfiguration>();
+            // Calculate total number of seats in the cabin
+            var rowCount = cabin.LastRow - cabin.FirstRow + 1;
+            var seatsPerRow = cabin.SeatLetters.Count;
+            var totalSeats = rowCount * seatsPerRow;
 
-            // A350-900 (351) Configuration
-            configs.Add("351", new SeatConfiguration
+            // Subtract blocked seats if any
+            if (cabin.BlockedSeats != null)
             {
-                AircraftType = "351",
-                Cabins = new Dictionary<string, CabinConfiguration>
-                {
-                    {
-                        "J", new CabinConfiguration // Business Class
-                        {
-                            CabinCode = "J",
-                            CabinName = "Upper Class",
-                            FirstRow = 1,
-                            LastRow = 11,
-                            SeatLetters = new List<string> { "A", "D", "G", "K" },
-                            BulkheadRows = new List<int> { 1 },
-                            GalleryRows = new List<int> { 1, 11 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "W", new CabinConfiguration // Premium Economy
-                        {
-                            CabinCode = "W",
-                            CabinName = "Premium",
-                            FirstRow = 20,
-                            LastRow = 27,
-                            SeatLetters = new List<string> { "A", "C", "D", "E", "G", "H", "K" },
-                            BulkheadRows = new List<int> { 20 },
-                            ExitRows = new List<int> { 20 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsAisle = false, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "Y", new CabinConfiguration // Economy
-                        {
-                            CabinCode = "Y",
-                            CabinName = "Economy",
-                            FirstRow = 30,
-                            LastRow = 63,
-                            SeatLetters = new List<string> { "A", "B", "C", "D", "E", "F", "G", "H", "J", "K" },
-                            BulkheadRows = new List<int> { 30 },
-                            ExitRows = new List<int> { 30, 46 },
-                            GalleryRows = new List<int> { 46 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "B", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "F", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "J", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    }
-                }
-            });
+                totalSeats -= cabin.BlockedSeats.Count;
+            }
 
-            // Boeing 787-9 (789) Configuration
-            configs.Add("789", new SeatConfiguration
-            {
-                AircraftType = "789",
-                Cabins = new Dictionary<string, CabinConfiguration>
-                {
-                    {
-                        "J", new CabinConfiguration
-                        {
-                            CabinCode = "J",
-                            CabinName = "Upper Class",
-                            FirstRow = 1,
-                            LastRow = 8,
-                            SeatLetters = new List<string> { "A", "D", "G", "K" },
-                            BulkheadRows = new List<int> { 1 },
-                            GalleryRows = new List<int> { 1, 8 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "W", new CabinConfiguration
-                        {
-                            CabinCode = "W",
-                            CabinName = "Premium",
-                            FirstRow = 20,
-                            LastRow = 24,
-                            SeatLetters = new List<string> { "A", "C", "D", "E", "G", "H", "K" },
-                            BulkheadRows = new List<int> { 20 },
-                            ExitRows = new List<int> { 20 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsAisle = false, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "Y", new CabinConfiguration
-                        {
-                            CabinCode = "Y",
-                            CabinName = "Economy",
-                            FirstRow = 30,
-                            LastRow = 58,
-                            SeatLetters = new List<string> { "A", "B", "C", "D", "E", "F", "G", "H", "J", "K" },
-                            BulkheadRows = new List<int> { 30 },
-                            ExitRows = new List<int> { 30, 44 },
-                            GalleryRows = new List<int> { 44 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "B", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "F", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "J", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    }
-                }
-            });
-
-            // A330-300 (333) Configuration
-            configs.Add("333", new SeatConfiguration
-            {
-                AircraftType = "333",
-                Cabins = new Dictionary<string, CabinConfiguration>
-                {
-                    {
-                        "J", new CabinConfiguration
-                        {
-                            CabinCode = "J",
-                            CabinName = "Upper Class",
-                            FirstRow = 1,
-                            LastRow = 9,
-                            SeatLetters = new List<string> { "A", "D", "G", "K" },
-                            BulkheadRows = new List<int> { 1 },
-                            GalleryRows = new List<int> { 1, 9 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "W", new CabinConfiguration
-                        {
-                            CabinCode = "W",
-                            CabinName = "Premium",
-                            FirstRow = 20,
-                            LastRow = 26,
-                            SeatLetters = new List<string> { "A", "C", "D", "E", "G", "H", "K" },
-                            BulkheadRows = new List<int> { 20 },
-                            ExitRows = new List<int> { 20 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsAisle = false, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "Y", new CabinConfiguration
-                        {
-                            CabinCode = "Y",
-                            CabinName = "Economy",
-                            FirstRow = 30,
-                            LastRow = 60,
-                            SeatLetters = new List<string> { "A", "B", "C", "D", "E", "F", "G", "H", "J", "K" },
-                            BulkheadRows = new List<int> { 30 },
-                            ExitRows = new List<int> { 30, 45 },
-                            GalleryRows = new List<int> { 45 },
-                            BlockedSeats = new List<BlockedSeat>
-                            {
-                                new BlockedSeat { SeatNumber = "31D", Reason = "Crew Rest" },
-                                new BlockedSeat { SeatNumber = "31G", Reason = "Crew Rest" }
-                            },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "B", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "F", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "J", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    }
-                }
-            });
-
-            // A330-900neo (339) Configuration
-            configs.Add("339", new SeatConfiguration
-            {
-                AircraftType = "339",
-                Cabins = new Dictionary<string, CabinConfiguration>
-                {
-                    {
-                        "J", new CabinConfiguration
-                        {
-                            CabinCode = "J",
-                            CabinName = "Upper Class",
-                            FirstRow = 1,
-                            LastRow = 8,
-                            SeatLetters = new List<string> { "A", "D", "G", "K" },
-                            BulkheadRows = new List<int> { 1 },
-                            GalleryRows = new List<int> { 1, 8 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "W", new CabinConfiguration
-                        {
-                            CabinCode = "W",
-                            CabinName = "Premium",
-                            FirstRow = 20,
-                            LastRow = 25,
-                            SeatLetters = new List<string> { "A", "C", "D", "E", "G", "H", "K" },
-                            BulkheadRows = new List<int> { 20 },
-                            ExitRows = new List<int> { 20 },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsAisle = false, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    },
-                    {
-                        "Y", new CabinConfiguration
-                        {
-                            CabinCode = "Y",
-                            CabinName = "Economy",
-                            FirstRow = 30,
-                            LastRow = 61,
-                            SeatLetters = new List<string> { "A", "B", "C", "D", "E", "F", "G", "H", "J", "K" },
-                            BulkheadRows = new List<int> { 30 },
-                            ExitRows = new List<int> { 30, 46 },
-                            GalleryRows = new List<int> { 46 },
-                            BlockedSeats = new List<BlockedSeat>
-                            {
-                                new BlockedSeat { SeatNumber = "31D", Reason = "Crew Rest" },
-                                new BlockedSeat { SeatNumber = "31G", Reason = "Crew Rest" },
-                                new BlockedSeat { SeatNumber = "46D", Reason = "Equipment" },
-                                new BlockedSeat { SeatNumber = "46G", Reason = "Equipment" }
-                            },
-                            SeatDefinitions = new Dictionary<string, BaseSeatDefinition>
-                            {
-                                { "A", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Left" } },
-                                { "B", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Left" } },
-                                { "C", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Left" } },
-                                { "D", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "E", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "F", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Center" } },
-                                { "G", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Center" } },
-                                { "H", new BaseSeatDefinition { IsWindow = false, IsAisle = true, Position = "Right" } },
-                                { "J", new BaseSeatDefinition { IsWindow = false, IsMiddle = true, Position = "Right" } },
-                                { "K", new BaseSeatDefinition { IsWindow = true, IsAisle = false, Position = "Right" } }
-                            }
-                        }
-                    }
-                }
-            });
-
-            return configs;
+            return totalSeats;
         }
 
         private string FindFlightAndGenerateLongSellCommand(string flightNo, int qty, string cabin)

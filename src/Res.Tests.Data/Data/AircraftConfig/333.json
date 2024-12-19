@@ -1,0 +1,179 @@
+﻿{
+  "aircraftType": "333",
+  "cabins": {
+    "J": {
+      "cabinCode": "J",
+      "cabinName": "Upper Class",
+      "firstRow": 1,
+      "lastRow": 9,
+      "seatLetters": [ "A", "D", "G", "K" ],
+      "bulkheadRows": [ 1 ],
+      "galleryRows": [ 1, 9 ],
+      "exitRows": [],
+      "blockedSeats": [
+        {
+          "seatNumber": "31D",
+          "reason": "Crew Rest"
+        },
+        {
+          "seatNumber": "31G",
+          "reason": "Crew Rest"
+        }
+      ],
+      "seatDefinitions": {
+        "A": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Left"
+        },
+        "D": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "G": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "K": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Right"
+        }
+      }
+    },
+    "W": {
+      "cabinCode": "W",
+      "cabinName": "Premium",
+      "firstRow": 20,
+      "lastRow": 26,
+      "seatLetters": [ "A", "C", "D", "E", "G", "H", "K" ],
+      "bulkheadRows": [ 20 ],
+      "exitRows": [ 20 ],
+      "galleryRows": [],
+      "blockedSeats": [],
+      "seatDefinitions": {
+        "A": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Left"
+        },
+        "C": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Left"
+        },
+        "D": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "E": {
+          "isWindow": false,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "G": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "H": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Right"
+        },
+        "K": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Right"
+        }
+      }
+    },
+    "Y": {
+      "cabinCode": "Y",
+      "cabinName": "Economy",
+      "firstRow": 30,
+      "lastRow": 60,
+      "seatLetters": [ "A", "B", "C", "D", "E", "F", "G", "H", "J", "K" ],
+      "bulkheadRows": [ 30 ],
+      "exitRows": [ 30, 45 ],
+      "galleryRows": [ 45 ],
+      "blockedSeats": [],
+      "seatDefinitions": {
+        "A": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Left"
+        },
+        "B": {
+          "isWindow": false,
+          "isAisle": false,
+          "isMiddle": true,
+          "position": "Left"
+        },
+        "C": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Left"
+        },
+        "D": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "E": {
+          "isWindow": false,
+          "isAisle": false,
+          "isMiddle": true,
+          "position": "Center"
+        },
+        "F": {
+          "isWindow": false,
+          "isAisle": false,
+          "isMiddle": true,
+          "position": "Center"
+        },
+        "G": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Center"
+        },
+        "H": {
+          "isWindow": false,
+          "isAisle": true,
+          "isMiddle": false,
+          "position": "Right"
+        },
+        "J": {
+          "isWindow": false,
+          "isAisle": false,
+          "isMiddle": true,
+          "position": "Right"
+        },
+        "K": {
+          "isWindow": true,
+          "isAisle": false,
+          "isMiddle": false,
+          "position": "Right"
+        }
+      }
+    }
+  }
+}
