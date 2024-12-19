@@ -14,6 +14,11 @@ namespace Res.Core.Common.Helpers
             return TimeSpan.ParseExact(time, "HHmm", CultureInfo.InvariantCulture);
         }
 
+        public static DateTime ParseAirlineDate(string dateStr)
+        {
+            return DateTime.ParseExact(dateStr, "ddMMM", CultureInfo.InvariantCulture);
+        }
+
         public static DateTime ParseAirlineLongDate(string dateStr)
         {
             return DateTime.ParseExact(dateStr, "ddMMMyy", CultureInfo.InvariantCulture);

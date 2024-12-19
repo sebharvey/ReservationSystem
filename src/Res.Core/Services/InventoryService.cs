@@ -28,12 +28,12 @@ namespace Res.Core.Services
                     flight.To == request.Destination &&
                     flight.DepartureDate == request.DepartureDate)
                 .ToList();
-    
+
             // Filter out past flights if searching for today
-            if (request.DepartureDate == DateTime.Now.ToString("ddMMM"))
+            if (DateTimeHelper.ParseAirlineDate(request.DepartureDate) == DateTime.Today)
             {
                 var currentTime = DateTime.Now.TimeOfDay;
-                availableFlights = availableFlights.Where(flight => 
+                availableFlights = availableFlights.Where(flight =>
                 {
                     var flightTime = TimeSpan.ParseExact(flight.DepartureTime, "hhmm", CultureInfo.InvariantCulture);
                     return flightTime >= currentTime;
@@ -148,7 +148,8 @@ namespace Res.Core.Services
         {
             // Get all of today's flights and any that have departed in the last 12 hours
             var recentFlights = _inventoryRepository.Inventory
-                .Where(f => {
+                .Where(f =>
+                {
                     var flightDate = DateTime.ParseExact(f.DepartureDate, "ddMMM", CultureInfo.InvariantCulture);
                     var departureDateTime = DateTimeHelper.CombineDateAndTime(f.DepartureDate, f.DepartureTime);
                     var arrivalDateTime = DateTimeHelper.CombineDateAndTime(f.ArrivalDate, f.ArrivalTime);
