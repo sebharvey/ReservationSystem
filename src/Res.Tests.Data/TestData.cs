@@ -20,38 +20,6 @@ namespace Res.Tests.Data
 
         private string _token;
 
-        private readonly Dictionary<string, Dictionary<string, int>> _aircraftConfigs = new()
-        {
-            {
-                "339", new Dictionary<string, int> {
-                    { "J", 32 }, // Business
-                    { "W", 46 }, // Premium Economy
-                    { "Y", 184 } // Economy
-                }
-            },
-            {
-                "351", new Dictionary<string, int> {
-                    { "J", 44 }, // Business
-                    { "W", 56 }, // Premium Economy
-                    { "Y", 235 } // Economy
-                }
-            },
-            {
-                "333", new Dictionary<string, int> {
-                    { "J", 31 }, // Business
-                    { "W", 48 }, // Premium Economy
-                    { "Y", 185 } // Economy
-                }
-            },
-            {
-                "789", new Dictionary<string, int> {
-                    { "J", 31 }, // Business
-                    { "W", 35 }, // Premium Economy
-                    { "Y", 198 } // Economy
-                }
-            }
-        };
-
         public TestData(IInventoryService inventoryService, IReservationSystem reservationSystem, ISeatMapRepository seatMapRepository, IUserRepository userRepository, IUserService userService)
         {
             _inventoryService = inventoryService;
