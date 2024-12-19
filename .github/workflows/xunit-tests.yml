@@ -2,9 +2,12 @@ name: Run xunit tests
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - master
   pull_request:
-    branches: [ main ]
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - master
 
 jobs:
   test:
