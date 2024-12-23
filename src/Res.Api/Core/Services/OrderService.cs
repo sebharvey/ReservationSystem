@@ -47,11 +47,12 @@ namespace Res.Api.Core.Services
                 {
                     UserId = "SYSTEM",
                     Role = "System",
-                    AgentId = "SYS001"
+                    AgentId = "SYS001",
+                    SessionId = Guid.NewGuid() // Create a new session for every web request
                 };
 
                 // 1. Create new PNR workspace
-                var pnr = await _reservationService.CreatePnrWorkspace(_reservationCommands.User);
+                await _reservationService.CreatePnrWorkspace();
 
                 // 2. Add passengers
                 foreach (var passenger in orderCreateRequest.Passengers)
@@ -161,7 +162,7 @@ namespace Res.Api.Core.Services
                             var segmentDepartureDate = segmentDetails[1];
 
                             // Find matching segment number in PNR
-                            var segmentNumber = pnrResponse.Segments
+                            var segmentNumber = pnrResponse.Data.Segments
                                 .Select((segment, index) => new { segment, index = index + 1 })
                                 .FirstOrDefault(s =>
                                     s.segment.FlightNumber == segmentFlightNumber &&
@@ -177,13 +178,13 @@ namespace Res.Api.Core.Services
                             foreach (var seatSelection in segmentSeats.Value)
                             {
                                 // Validate passenger number is within range
-                                if (seatSelection.Passenger < 1 || seatSelection.Passenger > pnrResponse.Passengers.Count)
+                                if (seatSelection.Passenger < 1 || seatSelection.Passenger > pnrResponse.Data.Passengers.Count)
                                 {
-                                    throw new Exception($"Invalid passenger number {seatSelection.Passenger}. Must be between 1 and {pnrResponse.Passengers.Count}");
+                                    throw new Exception($"Invalid passenger number {seatSelection.Passenger}. Must be between 1 and {pnrResponse.Data.Passengers.Count}");
                                 }
 
                                 // Get the passenger (adjusting for 1-based indexing)
-                                var passenger = pnrResponse.Passengers[seatSelection.Passenger - 1];
+                                var passenger = pnrResponse.Data.Passengers[seatSelection.Passenger - 1];
 
                                 // Format and process the seat assignment command
                                 var seatCommand = $"ST/{seatSelection.Seat}/P{passenger.PassengerId}/S{segmentNumber}";
@@ -251,10 +252,10 @@ namespace Res.Api.Core.Services
                 }
 
                 // Retrieve PNR
-                var pnr = await _reservationService.RetrievePnr(request.RecordLocator.ToUpper());
+                await _reservationService.RetrievePnr(request.RecordLocator.ToUpper());
 
                 // Validate PNR exists and is ticketed
-                if (pnr == null)
+                if (_reservationService.Pnr == null)
                 {
                     return new OrderRetrieveResponse
                     {
@@ -263,7 +264,7 @@ namespace Res.Api.Core.Services
                     };
                 }
 
-                if (pnr.Status != PnrStatus.Ticketed)
+                if (_reservationService.Pnr.Data.Status != PnrStatus.Ticketed)
                 {
                     return new OrderRetrieveResponse
                     {
@@ -273,7 +274,7 @@ namespace Res.Api.Core.Services
                 }
 
                 // Verify last name matches a passenger
-                bool lastNameMatches = pnr.Passengers.Any(p => p.LastName.Equals(request.LastName, StringComparison.OrdinalIgnoreCase));
+                bool lastNameMatches = _reservationService.Pnr.Data.Passengers.Any(p => p.LastName.Equals(request.LastName, StringComparison.OrdinalIgnoreCase));
 
                 if (!lastNameMatches)
                 {
@@ -288,18 +289,18 @@ namespace Res.Api.Core.Services
                 return new OrderRetrieveResponse
                 {
                     Success = true,
-                    RecordLocator = pnr.RecordLocator,
-                    Status = pnr.Status.ToString(),
-                    Tickets = pnr.Tickets,
-                    BoardingPasses = GetValidBoardingPasses(pnr), 
-                    Passengers = pnr.Passengers.Select(p => new OrderRetrieveResponse.PassengerInfo
+                    RecordLocator = _reservationService.Pnr.RecordLocator,
+                    Status = _reservationService.Pnr.Data.Status.ToString(),
+                    Tickets = _reservationService.Pnr.Data.Tickets,
+                    BoardingPasses = GetValidBoardingPasses(_reservationService.Pnr), 
+                    Passengers = _reservationService.Pnr.Data.Passengers.Select(p => new OrderRetrieveResponse.PassengerInfo
                     {
                         Title = p.Title,
                         FirstName = p.FirstName,
                         LastName = p.LastName,
-                        TicketNumber = pnr.Tickets.FirstOrDefault(t => t.PassengerId == p.PassengerId)?.TicketNumber
+                        TicketNumber = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == p.PassengerId)?.TicketNumber
                     }).ToList(),
-                    Segments = pnr.Segments.Select(s => new OrderRetrieveResponse.SegmentInfo
+                    Segments = _reservationService.Pnr.Data.Segments.Select(s => new OrderRetrieveResponse.SegmentInfo
                     {
                         FlightNumber = s.FlightNumber,
                         Origin = s.Origin,
@@ -313,8 +314,8 @@ namespace Res.Api.Core.Services
                     }).ToList(),
                     Contact = new OrderRetrieveResponse.ContactInfo
                     {
-                        PhoneNumber = pnr.Contact.PhoneNumber,
-                        EmailAddress = pnr.Contact.EmailAddress
+                        PhoneNumber = _reservationService.Pnr.Data.Contact.PhoneNumber,
+                        EmailAddress = _reservationService.Pnr.Data.Contact.EmailAddress
                     }
                 };
             }
@@ -335,14 +336,14 @@ namespace Res.Api.Core.Services
             var boardingPasses = new List<BoardingPass>();
 
             // Only proceed if PNR has tickets
-            if (!pnr.Tickets.Any())
+            if (!pnr.Data.Tickets.Any())
                 return boardingPasses;
 
             // Process each segment
-            foreach (var segment in pnr.Segments.Where(s => !s.IsSurfaceSegment))
+            foreach (var segment in pnr.Data.Segments.Where(s => !s.IsSurfaceSegment))
             {
                 // Get passengers with valid tickets and checked-in coupons for this segment
-                var validPassengers = pnr.Tickets
+                var validPassengers = pnr.Data.Tickets
                     .Where(ticket => ticket.Coupons.Any(coupon =>
                         coupon.FlightNumber == segment.FlightNumber &&
                         coupon.DepartureDate == segment.DepartureDate &&
@@ -350,17 +351,17 @@ namespace Res.Api.Core.Services
                     .Select(ticket => new
                     {
                         Ticket = ticket,
-                        Passenger = pnr.Passengers.First(p => p.PassengerId == ticket.PassengerId),
-                        SeatAssignment = pnr.SeatAssignments.FirstOrDefault(sa =>
+                        Passenger = pnr.Data.Passengers.First(p => p.PassengerId == ticket.PassengerId),
+                        SeatAssignment = pnr.Data.SeatAssignments.FirstOrDefault(sa =>
                             sa.PassengerId == ticket.PassengerId &&
-                            sa.SegmentNumber == (pnr.Segments.IndexOf(segment) + 1).ToString())
+                            sa.SegmentNumber == (pnr.Data.Segments.IndexOf(segment) + 1).ToString())
                     });
 
                 // Generate boarding pass for each valid passenger
                 foreach (var passengerInfo in validPassengers)
                 {
                     // Find any SSRs for this passenger
-                    var ssrCodes = pnr.SpecialServiceRequests
+                    var ssrCodes = pnr.Data.SpecialServiceRequests
                         .Where(ssr => ssr.PassengerId == passengerInfo.Passenger.PassengerId)
                         .Select(ssr => ssr.Code)
                         .ToList();

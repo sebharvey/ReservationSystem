@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Res.Application.Commands;
 using Res.Application.Interfaces;
@@ -16,13 +17,12 @@ namespace Res.Application
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddScoped<IPnrDataManager>(provider => new PnrDataManager(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped<IFlightInventoryDataManager>(provider => new FlightInventoryDataManager(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped<IFlightSeatInventoryDataManager>(provider => new FlightSeatInventoryDataManager(configuration.GetConnectionString("DefaultConnection")));
-            services.AddScoped<ISeatConfigurationDataManager>(provider => new SeatConfigurationDataManager(configuration.GetConnectionString("DefaultConnection")));
+            // Register DB contexts
+            services.AddDbContext<PnrContext>(options => options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+             
+            services.AddScoped<IPnrRepository, PnrRepository>();
 
-            // Register repositories as singletons since they're holding in-memory data
-            services.AddSingleton<IPnrRepository, PnrRepository>();
+            // Register repositories as singletons since they're holding in-memory data - TODO these need moving to Scoped once SQL has been added
             services.AddSingleton<IInventoryRepository, InventoryRepository>();
             services.AddSingleton<ISeatMapRepository, SeatMapRepository>();
             services.AddSingleton<IUserRepository, UserRepository>();
@@ -61,7 +61,7 @@ namespace Res.Application
             services.AddScoped<IReservationCommands, ReservationCommands>();
 
             // Register as a singleton to maintain persistence between requests
-            services.AddSingleton<IReservationSystem, ReservationSystem.ReservationSystem>();
+            services.AddScoped<IReservationSystem, ReservationSystem.ReservationSystem>();
 
             return services;
         }

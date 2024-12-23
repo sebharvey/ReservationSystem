@@ -10,6 +10,8 @@ namespace Res.Core.Services
 {
     public class BoardingPassService : IBoardingPassService
     {
+        public Pnr Pnr { get; set; }
+
         // Constants for barcode generation
         private const string FrequentFlyerTier = "LEE"; // Loyalty program tier
         private const string SecurityData = "O";  // International security status
@@ -19,31 +21,22 @@ namespace Res.Core.Services
         private const string SourceOfBoardingPass = "2"; // Source of boarding pass issuance
         private const string BoardingPassIssueYear = "3"; // Year of issue
         private const string VersionNumber = "G"; // Format version number
-        private const string FieldSize = "091"; // Fixed size of the document
-
-        private readonly IReservationService _reservationService;
-
-        public BoardingPassService(IReservationService reservationService)
-        {
-            _reservationService = reservationService;
-        }
-
+        private const string FieldSize = "091"; // Fixed size of the document 
+         
         public BoardingPass GenerateBoardingPass(BoardingPassRequest request)
         {
-            // Get PNR to access passenger details needed for boarding pass
-            var pnr = _reservationService.RetrievePnr(request.RecordLocator).Result;
-            if (pnr == null)
+            if (Pnr == null)
                 throw new Exception("PNR NOT FOUND");
 
-            var passenger = pnr.Passengers.FirstOrDefault(p => Convert.ToInt32(p.PassengerId) == request.PassengerId);
+            var passenger = Pnr.Data.Passengers.FirstOrDefault(p => Convert.ToInt32(p.PassengerId) == request.PassengerId);
             if (passenger == null)
                 throw new Exception("PASSENGER NOT FOUND");
 
-            var segment = pnr.Segments.FirstOrDefault(s => s.FlightNumber == request.FlightNumber);
+            var segment = Pnr.Data.Segments.FirstOrDefault(s => s.FlightNumber == request.FlightNumber);
             if (segment == null)
                 throw new Exception("SEGMENT NOT FOUND");
 
-            var ticket = pnr.Tickets.FirstOrDefault(t => t.TicketNumber == request.TicketNumber);
+            var ticket = Pnr.Data.Tickets.FirstOrDefault(t => t.TicketNumber == request.TicketNumber);
             if (ticket == null)
                 throw new Exception("TICKET NOT FOUND");
 
@@ -77,7 +70,7 @@ namespace Res.Core.Services
             // Add special services if provided
             if (request.SsrCodes?.Any() == true)
             {
-                AddSpecialServices(boardingPass, pnr.SpecialServiceRequests, request.SsrCodes);
+                AddSpecialServices(boardingPass, Pnr.Data.SpecialServiceRequests, request.SsrCodes);
             }
 
             // Add fast track/lounge access based on ticket class

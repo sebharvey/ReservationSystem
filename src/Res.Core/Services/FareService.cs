@@ -39,19 +39,19 @@ namespace Res.Core.Services
             }
 
             // Add or update fare in PNR
-            var existingFare = pnr.Fares.FirstOrDefault(f => f.PassengerId == fare.PassengerId);
+            var existingFare = pnr.Data.Fares.FirstOrDefault(f => f.PassengerId == fare.PassengerId);
             if (existingFare != null)
-                pnr.Fares.Remove(existingFare);
+                pnr.Data.Fares.Remove(existingFare);
 
-            pnr.Fares.Add(fare);
+            pnr.Data.Fares.Add(fare);
             return pnr;
         }
 
         public async Task<Pnr> StoreFare(Pnr pnr, StoreFareRequest request)
         {
             // Group fares by passenger type
-            var fareGroups = pnr.Fares
-                .GroupBy(f => pnr.Passengers.First(p => p.PassengerId == f.PassengerId).Type);
+            var fareGroups = pnr.Data.Fares
+                .GroupBy(f => pnr.Data.Passengers.First(p => p.PassengerId == f.PassengerId).Type);
 
             foreach (var group in fareGroups)
             {
@@ -109,7 +109,7 @@ namespace Res.Core.Services
 
         public async Task<Pnr> AddFormOfPayment(Pnr pnr, string formOfPayment)
         {
-            pnr.FormOfPayment = formOfPayment;
+            pnr.Data.FormOfPayment = formOfPayment;
 
             return pnr;
         }
@@ -119,26 +119,26 @@ namespace Res.Core.Services
             if (pnr == null)
                 throw new ArgumentNullException(nameof(pnr));
 
-            if (pnr.TicketingInfo?.TimeLimit == default)
+            if (pnr.Data.TicketingInfo?.TimeLimit == default)
                 throw new InvalidOperationException("NO TICKETING ARRANGEMENTS - USE TLTL TO ADD");
 
             // Clear existing fares if repricing
             if (request.IsReprice)
             {
-                pnr.Fares.Clear();
+                pnr.Data.Fares.Clear();
             }
 
-            foreach (var passenger in pnr.Passengers)
+            foreach (var passenger in pnr.Data.Passengers)
             {
                 var fare = CalculatePassengerFare(pnr, passenger, request.Currency);
 
                 // Add or update fare in PNR
-                var existingFare = pnr.Fares.FirstOrDefault(f => f.PassengerId == passenger.PassengerId);
+                var existingFare = pnr.Data.Fares.FirstOrDefault(f => f.PassengerId == passenger.PassengerId);
                 if (existingFare != null)
                 {
-                    pnr.Fares.Remove(existingFare);
+                    pnr.Data.Fares.Remove(existingFare);
                 }
-                pnr.Fares.Add(fare);
+                pnr.Data.Fares.Add(fare);
             }
 
             return pnr;
@@ -149,14 +149,14 @@ namespace Res.Core.Services
             var fare = new FareInfo
             {
                 PassengerId = passenger.PassengerId,
-                ValidatingCarrier = pnr.TicketingInfo.ValidatingCarrier ?? "VS",
+                ValidatingCarrier = pnr.Data.TicketingInfo.ValidatingCarrier ?? "VS",
                 Currency = currency,
-                LastDateToTicket = pnr.TicketingInfo.TimeLimit,
+                LastDateToTicket = pnr.Data.TicketingInfo.TimeLimit,
                 AvailableFareFamilies = new List<FareFamily>()
             };
 
             // Calculate base fare and fare bases
-            var (baseFare, fareBases) = CalculateSegmentPrices(pnr.Segments, currency);
+            var (baseFare, fareBases) = CalculateSegmentPrices(pnr.Data.Segments, currency);
             fare.FareBasis = string.Join("/", fareBases);
 
             // Create fare family options

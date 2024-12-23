@@ -27,17 +27,17 @@ namespace Res.Api.Core.Services
                 var pnr = await _checkinService.ValidatePnr(request.RecordLocator, request.From);
 
                 // Find matching flight segment
-                var segment = pnr.Segments.FirstOrDefault(s => s.Origin == request.From);
+                var segment = pnr.Data.Segments.FirstOrDefault(s => s.Origin == request.From);
 
                 // Map passengers with their tickets
-                var passengers = pnr.Passengers.Select(p => new ValidateCheckInResponse.PassengerInfo
+                var passengers = pnr.Data.Passengers.Select(p => new ValidateCheckInResponse.PassengerInfo
                 {
                     PassengerId = p.PassengerId,
                     Title = p.Title,
                     FirstName = p.FirstName,
                     LastName = p.LastName,
                     Type = p.Type.ToString(),
-                    Ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == p.PassengerId)?.TicketNumber
+                    Ticket = pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == p.PassengerId)?.TicketNumber
                 }).ToList();
 
                 // Return success with PNR details
@@ -68,17 +68,18 @@ namespace Res.Api.Core.Services
             try
             {
                 // 1. Retrieve PNR and perform initial validations
-                var pnr = await _reservationService.RetrievePnr(checkInRequest.RecordLocator);
-                if (pnr == null)
+                await _reservationService.RetrievePnr(checkInRequest.RecordLocator);
+                
+                if (_reservationService.Pnr == null)
                     throw new Exception("PNR NOT FOUND");
 
                 // 2. Find matching flight segment
-                var segment = pnr.Segments.FirstOrDefault(s => s.FlightNumber == checkInRequest.From);
+                var segment = _reservationService.Pnr.Data.Segments.FirstOrDefault(s => s.FlightNumber == checkInRequest.From);
                 if (segment == null)
                     throw new Exception("SEGMENT NOT FOUND");
 
                 // 3. Create passport information SSRs for each passenger
-                foreach (var passenger in pnr.Passengers)
+                foreach (var passenger in _reservationService.Pnr.Data.Passengers)
                 {
                     // Find matching passenger info from request
                     var passengerInfo = checkInRequest.PassengerInfo?
@@ -106,7 +107,7 @@ namespace Res.Api.Core.Services
                                $"{passenger.LastName}"
                     };
 
-                    pnr.SpecialServiceRequests.Add(docsSsr);
+                    _reservationService.Pnr.Data.SpecialServiceRequests.Add(docsSsr);
 
                     // Add APIS address SSR for each passenger
                     if (checkInRequest.ApisInformation != null)
@@ -127,7 +128,7 @@ namespace Res.Api.Core.Services
                                    $"{checkInRequest.ApisInformation.Postal}"
                         };
 
-                        pnr.SpecialServiceRequests.Add(apisAddressSsr);
+                        _reservationService.Pnr.Data.SpecialServiceRequests.Add(apisAddressSsr);
                     }
                 }
 
@@ -137,7 +138,7 @@ namespace Res.Api.Core.Services
                     RecordLocator = checkInRequest.RecordLocator,
                     FlightNumber = checkInRequest.From,
                     DepartureDate = segment.DepartureDate,
-                    Passengers = pnr.Passengers.Select(passenger =>
+                    Passengers = _reservationService.Pnr.Data.Passengers.Select(passenger =>
                     {
                         var passengerInfo = checkInRequest.PassengerInfo
                             .First(p => p.PassengerId == passenger.PassengerId);
@@ -176,7 +177,7 @@ namespace Res.Api.Core.Services
                 List<BoardingPass> boardingPasses = await _checkinService.CheckInAll(checkInRequest.RecordLocator, segment.FlightNumber);
 
                 // 7. Save all changes to PNR
-                await _reservationService.CommitPnr(pnr);
+                await _reservationService.CommitPnr();
 
                 return new CheckInResponse
                 {

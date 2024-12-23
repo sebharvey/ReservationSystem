@@ -12,7 +12,7 @@ namespace Res.Core.Services
     {
         private readonly IPaymentService _paymentService;
         private readonly ILogger<TicketingService> _logger;
-        private static int _ticketCounter = 1000000;
+        private static int _ticketCounter = 1000000; // TODO this can't be static - we need to load this from a DB
         private readonly object _lockObj = new();
 
         private readonly Dictionary<string, string> _airlineNumericCodes = new()
@@ -40,26 +40,26 @@ namespace Res.Core.Services
             _logger.LogInformation("Starting ticket issuance for PNR {PnrLocator}", pnr.RecordLocator);
 
             // Initial validations
-            if (!pnr.Fares.Any(f => f.IsStored))
+            if (!pnr.Data.Fares.Any(f => f.IsStored))
                 throw new InvalidOperationException("NO STORED FARE");
 
-            if (string.IsNullOrWhiteSpace(pnr.FormOfPayment))
+            if (string.IsNullOrWhiteSpace(pnr.Data.FormOfPayment))
                 throw new InvalidOperationException("NO FORM OF PAYMENT - USE FP TO ADD");
 
-            var airSegments = pnr.Segments.Where(s => !s.IsSurfaceSegment).ToList();
+            var airSegments = pnr.Data.Segments.Where(s => !s.IsSurfaceSegment).ToList();
             if (airSegments.Count > 4)
                 throw new InvalidOperationException("MAXIMUM 4 AIR SEGMENTS PER TICKET");
 
-            decimal totalAmount = pnr.Fares.Sum(f => f.FareAmount);
+            decimal totalAmount = pnr.Data.Fares.Sum(f => f.FareAmount);
 
             PaymentAuthorizationResult authResult = null;
 
             try
             {
                 // Handle credit card payments
-                if (pnr.FormOfPayment.StartsWith("CC"))
+                if (pnr.Data.FormOfPayment.StartsWith("CC"))
                 {
-                    var fopParts = pnr.FormOfPayment.Split('/');
+                    var fopParts = pnr.Data.FormOfPayment.Split('/');
 
                     if (fopParts.Length != 5)
                         throw new InvalidOperationException("INVALID CREDIT CARD FOP FORMAT");
@@ -84,9 +84,9 @@ namespace Res.Core.Services
                 // Step 2: Create tickets
                 var tickets = new List<Ticket>();
 
-                foreach (var passenger in pnr.Passengers)
+                foreach (var passenger in pnr.Data.Passengers)
                 {
-                    var fare = pnr.Fares.FirstOrDefault(f => f.PassengerId == passenger.PassengerId);
+                    var fare = pnr.Data.Fares.FirstOrDefault(f => f.PassengerId == passenger.PassengerId);
 
                     if (fare == null)
                     {
@@ -102,7 +102,7 @@ namespace Res.Core.Services
                         FareAmount = fare.FareAmount,
                         Status = TicketStatus.Valid,
                         IssueDate = DateTime.UtcNow,
-                        IssuingOffice = pnr.Agency.OfficeId,
+                        IssuingOffice = pnr.Data.Agency.OfficeId,
                         ValidatingCarrier = fare.ValidatingCarrier,
                         Coupons = new List<Coupon>()
                     };
@@ -115,9 +115,9 @@ namespace Res.Core.Services
                     var couponIndex = 0;
 
                     // Generate coupons for each segment
-                    for (int i = 0; i < pnr.Segments.Count; i++)
+                    for (int i = 0; i < pnr.Data.Segments.Count; i++)
                     {
-                        var segment = pnr.Segments[i];
+                        var segment = pnr.Data.Segments[i];
 
                         // Skip ARNK segments
                         if (segment.IsSurfaceSegment)
@@ -173,7 +173,7 @@ namespace Res.Core.Services
                         CreatedDate = DateTime.UtcNow
                     };
 
-                    pnr.OtherServiceInformation.Add(paymentOsi);
+                    pnr.Data.OtherServiceInformation.Add(paymentOsi);
                 }
                 else
                 {
@@ -182,11 +182,11 @@ namespace Res.Core.Services
                     {
                         Category = OsiCategory.PaymentInfo,
                         CompanyId = airSegments[0].FlightNumber.Substring(0, 2),
-                        Text = $"PAYMENT RECORDED {DateTime.UtcNow:ddMMMyy/HHmm} FOP:{pnr.FormOfPayment}",
+                        Text = $"PAYMENT RECORDED {DateTime.UtcNow:ddMMMyy/HHmm} FOP:{pnr.Data.FormOfPayment}",
                         CreatedDate = DateTime.UtcNow
                     };
 
-                    pnr.OtherServiceInformation.Add(paymentOsi);
+                    pnr.Data.OtherServiceInformation.Add(paymentOsi);
                 }
 
                 return tickets;

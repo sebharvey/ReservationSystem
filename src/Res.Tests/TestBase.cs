@@ -20,7 +20,7 @@ namespace Res.Tests
         protected IReservationSystem ReservationSystem;
         protected IReservationService ReservationService;
         protected IInventoryRepository InventoryRepository;
-        protected IPnrRepository PnrRepository;
+        //protected IPnrRepository PnrRepository;
         protected ISeatMapRepository SeatMapRepository;
         protected IUserRepository UserRepository;
         protected IUserService UserService;
@@ -63,7 +63,7 @@ namespace Res.Tests
         private void ConfigureMockServices(IServiceCollection services, IConfiguration configuration)
         {
             services.AddSingleton(_ => Mock.Of<IInventoryRepository>());
-            services.AddSingleton(_ => Mock.Of<IPnrRepository>());
+            //services.AddSingleton(_ => Mock.Of<IPnrRepository>());
 
             services.AddScoped(_ => Mock.Of<IApisService>(apis =>
                 apis.ValidateApisData(It.IsAny<ApisData>()) == Task.FromResult(true) &&
@@ -104,7 +104,7 @@ namespace Res.Tests
             ReservationSystem = Scope.ServiceProvider.GetRequiredService<IReservationSystem>();
             ReservationService = Scope.ServiceProvider.GetRequiredService<IReservationService>();
             InventoryRepository = Scope.ServiceProvider.GetRequiredService<IInventoryRepository>();
-            PnrRepository = Scope.ServiceProvider.GetRequiredService<IPnrRepository>();
+            //PnrRepository = Scope.ServiceProvider.GetRequiredService<IPnrRepository>();
             SeatMapRepository = Scope.ServiceProvider.GetRequiredService<ISeatMapRepository>();
             UserRepository = Scope.ServiceProvider.GetRequiredService<IUserRepository>();
             UserService = Scope.ServiceProvider.GetRequiredService<IUserService>();

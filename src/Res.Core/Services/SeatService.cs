@@ -8,10 +8,12 @@ namespace Res.Core.Services
 {
     public class SeatService : ISeatService
     {
+        public Pnr Pnr { get; set; }
+
         private readonly IInventoryService _inventoryService;
         private readonly IInventoryRepository _inventoryRepository;
         private readonly ISeatMapRepository _seatMapRepository;
-
+        
         public SeatService(IInventoryService inventoryService, ISeatMapRepository seatMapRepository, IInventoryRepository inventoryRepository)
         {
             _inventoryService = inventoryService;
@@ -19,7 +21,7 @@ namespace Res.Core.Services
             _inventoryRepository = inventoryRepository;
         }
 
-        public async Task<SeatMap> DisplaySeatMap(Pnr pnr, string flightNumber, string departureDate, string bookingClass = null)
+        public async Task<SeatMap> DisplaySeatMap(string flightNumber, string departureDate, string bookingClass = null)
         {
             var flight = await _inventoryService.FindFlight(flightNumber, departureDate);
 
@@ -77,14 +79,14 @@ namespace Res.Core.Services
                             seat.Status = "X";
 
                             // If this is a PNR display, check if it's assigned to current PNR
-                            if (pnr != null)
+                            if (Pnr.Data != null)
                             {
-                                var assignment = pnr.SeatAssignments.FirstOrDefault(sa =>
+                                var assignment = Pnr.Data.SeatAssignments.FirstOrDefault(sa =>
                                     sa.SeatNumber == seatNumber);
 
                                 if (assignment != null)
                                 {
-                                    var passenger = pnr.Passengers.First(p => p.PassengerId == assignment.PassengerId);
+                                    var passenger = Pnr.Data.Passengers.First(p => p.PassengerId == assignment.PassengerId);
                                     seat.BlockedReason = $"Assigned to {passenger.LastName}/{passenger.FirstName}";
                                 }
                                 else
@@ -121,18 +123,18 @@ namespace Res.Core.Services
             return _inventoryRepository.SeatInventory.TryGetValue(key, out var inventory) ? inventory : null;
         }
 
-        public async Task<bool> AssignSeat(Pnr pnr, string seatNumber, int passengerId, string segmentNumber)
+        public async Task<bool> AssignSeat(string seatNumber, int passengerId, string segmentNumber)
         {
             // Validate passenger exists
-            var passenger = pnr.Passengers.FirstOrDefault(p => p.PassengerId == passengerId);
+            var passenger = Pnr.Data.Passengers.FirstOrDefault(p => p.PassengerId == passengerId);
             if (passenger == null)
                 throw new ArgumentException("Invalid passenger number");
 
             // Get segment
-            if (int.Parse(segmentNumber) > pnr.Segments.Count)
+            if (int.Parse(segmentNumber) > Pnr.Data.Segments.Count)
                 throw new ArgumentException("Invalid segment number");
 
-            var segment = pnr.Segments[int.Parse(segmentNumber) - 1];
+            var segment = Pnr.Data.Segments[int.Parse(segmentNumber) - 1];
 
             // Get flight details including aircraft type from inventory
             var flight = await _inventoryService.FindFlight(segment.FlightNumber, segment.DepartureDate);
@@ -155,13 +157,13 @@ namespace Res.Core.Services
                 throw new InvalidOperationException("Seat not available");
 
             // Remove any existing seat assignment
-            var existingSeat = pnr.SeatAssignments.FirstOrDefault(s =>
+            var existingSeat = Pnr.Data.SeatAssignments.FirstOrDefault(s =>
                 s.PassengerId == passengerId && s.SegmentNumber == segmentNumber);
 
             if (existingSeat != null)
             {
                 await _inventoryService.ReleaseSeat(segment.FlightNumber, segment.DepartureDate, existingSeat.SeatNumber);
-                pnr.SeatAssignments.Remove(existingSeat);
+                Pnr.Data.SeatAssignments.Remove(existingSeat);
             }
 
             // Assign new seat
@@ -169,7 +171,7 @@ namespace Res.Core.Services
                 throw new InvalidOperationException("Unable to assign seat");
 
             // Add seat assignment to PNR
-            pnr.SeatAssignments.Add(new SeatAssignment
+            Pnr.Data.SeatAssignments.Add(new SeatAssignment
             {
                 PassengerId = passengerId,
                 SegmentNumber = segmentNumber,
@@ -180,21 +182,21 @@ namespace Res.Core.Services
             return true;
         }
 
-        public async Task<bool> RemoveSeat(Pnr pnr, int passengerId, string segmentNumber)
+        public async Task<bool> RemoveSeat(int passengerId, string segmentNumber)
         {
-            var seatAssignment = pnr.SeatAssignments.FirstOrDefault(s =>
+            var seatAssignment = Pnr.Data.SeatAssignments.FirstOrDefault(s =>
                 s.PassengerId == passengerId && s.SegmentNumber == segmentNumber);
 
             if (seatAssignment == null)
                 throw new InvalidOperationException("No seat assignment found");
 
-            var segment = pnr.Segments[int.Parse(segmentNumber) - 1];
+            var segment = Pnr.Data.Segments[int.Parse(segmentNumber) - 1];
 
             // Release seat in inventory
             await _inventoryService.ReleaseSeat(segment.FlightNumber, segment.DepartureDate, seatAssignment.SeatNumber);
 
             // Remove from PNR
-            pnr.SeatAssignments.Remove(seatAssignment);
+            Pnr.Data.SeatAssignments.Remove(seatAssignment);
 
             return true;
         }

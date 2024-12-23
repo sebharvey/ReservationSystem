@@ -38,6 +38,7 @@ namespace Res.Core.Services
 
             var claims = new[]
             {
+                new Claim("SessionId", Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.Name, userId),
                 new Claim(ClaimTypes.Role, "Agent"),
                 new Claim("AgentId", userId)
@@ -85,6 +86,7 @@ namespace Res.Core.Services
                         UserId = principal.Identity.Name,
                         Role = principal.FindFirst(ClaimTypes.Role)?.Value,
                         AgentId = principal.FindFirst("AgentId")?.Value,
+                        SessionId = Guid.Parse(principal.FindFirst("SessionId")?.Value),
                         TokenExpiry = jwtToken.ValidTo
                     }
                 };

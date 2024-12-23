@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Azure.Core;
 using Res.Core.Common.Helpers;
 using Res.Core.Interfaces;
 using Res.Domain.Entities.CheckIn;
@@ -36,22 +35,23 @@ namespace Res.Core.Services
         public async Task<BoardingPass> CheckIn(string recordLocator, CheckInRequest request)
         {
             // 1. Retrieve PNR and perform initial validations
-            var pnr = await _reservationService.RetrievePnr(recordLocator);
-            if (pnr == null)
+            await _reservationService.RetrievePnr(recordLocator);
+
+            if (_reservationService.Pnr == null)
                 throw new Exception("PNR NOT FOUND");
 
             // 2. Validate passenger exists
-            var passenger = pnr.Passengers.FirstOrDefault(p => p.PassengerId == request.PassengerId);
+            var passenger = _reservationService.Pnr.Data.Passengers.FirstOrDefault(p => p.PassengerId == request.PassengerId);
             if (passenger == null)
                 throw new Exception("PASSENGER NOT FOUND");
 
             // 3. Find matching flight segment
-            var segment = pnr.Segments.FirstOrDefault(s => s.FlightNumber == request.FlightNumber);
+            var segment = _reservationService.Pnr.Data.Segments.FirstOrDefault(s => s.FlightNumber == request.FlightNumber);
             if (segment == null)
                 throw new Exception("SEGMENT NOT FOUND");
 
             // 4. Find and validate ticket
-            var ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == request.PassengerId);
+            var ticket = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == request.PassengerId);
             if (ticket == null)
                 throw new Exception("TICKET NOT FOUND");
 
@@ -64,8 +64,8 @@ namespace Res.Core.Services
 
             // 5-8. Perform various validations...
             await ValidateCheckinWindow(segment);
-            await ValidateTravelDocuments(pnr.SpecialServiceRequests.Where(s => s.Code == "DOCS").ToList(), segment);
-            await PerformSecurityChecks(pnr, passenger, request);
+            await ValidateTravelDocuments(_reservationService.Pnr.Data.SpecialServiceRequests.Where(s => s.Code == "DOCS").ToList(), segment);
+            await PerformSecurityChecks(_reservationService.Pnr, passenger, request);
             await SubmitApisInformation(recordLocator, request, segment);
 
             // 9. Check and assign seat
@@ -75,9 +75,9 @@ namespace Res.Core.Services
             if (string.IsNullOrEmpty(finalSeatNumber))
             {
                 // First check for pre-assigned seat
-                var existingSeat = pnr.SeatAssignments.FirstOrDefault(s =>
+                var existingSeat = _reservationService.Pnr.Data.SeatAssignments.FirstOrDefault(s =>
                     s.PassengerId == request.PassengerId &&
-                    s.SegmentNumber == (pnr.Segments.IndexOf(segment) + 1).ToString());
+                    s.SegmentNumber == (_reservationService.Pnr.Data.Segments.IndexOf(segment) + 1).ToString());
 
                 if (existingSeat != null)
                 {
@@ -92,10 +92,10 @@ namespace Res.Core.Services
                         throw new Exception("NO SEATS AVAILABLE");
 
                     // Add seat assignment to PNR
-                    pnr.SeatAssignments.Add(new SeatAssignment
+                    _reservationService.Pnr.Data.SeatAssignments.Add(new SeatAssignment
                     {
                         PassengerId = request.PassengerId,
-                        SegmentNumber = (pnr.Segments.IndexOf(segment) + 1).ToString(),
+                        SegmentNumber = (_reservationService.Pnr.Data.Segments.IndexOf(segment) + 1).ToString(),
                         SeatNumber = finalSeatNumber,
                         AssignedDate = DateTime.UtcNow
                     });
@@ -104,10 +104,13 @@ namespace Res.Core.Services
             else
             {
                 // Validate specified seat
-                await ValidateSeat(segment.FlightNumber, finalSeatNumber, ticket, pnr, request.PassengerId);
+                await ValidateSeat(segment.FlightNumber, finalSeatNumber, ticket, _reservationService.Pnr, request.PassengerId);
             }
 
             // 10. Create boarding pass with assigned seat
+
+            _boardingPassService.Pnr = _reservationService.Pnr;
+
             var boardingPass = _boardingPassService.GenerateBoardingPass(new BoardingPassRequest
             {
                 RecordLocator = recordLocator,
@@ -129,16 +132,16 @@ namespace Res.Core.Services
             boardingPass.Passenger = passenger;
 
             // Add special handling instructions
-            AddSpecialHandlingInstructions(boardingPass, pnr.SpecialServiceRequests, request.SsrCodes);
+            AddSpecialHandlingInstructions(boardingPass, _reservationService.Pnr.Data.SpecialServiceRequests, request.SsrCodes);
 
             // Update ticket coupon status
             coupon.Status = CouponStatus.CheckedIn;
 
             // Add check-in OSIs to PNR
-            AddCheckInOsis(pnr, boardingPass);
+            AddCheckInOsis(_reservationService.Pnr, boardingPass);
 
             // Save changes to PNR
-            await _reservationService.CommitPnr(pnr);
+            await _reservationService.CommitPnr();
 
             return boardingPass;
         }
@@ -174,12 +177,13 @@ namespace Res.Core.Services
         public async Task<List<BoardingPass>> CheckInAll(string recordLocator, string flightNumber)
         {
             // 1. Retrieve PNR
-            var pnr = await _reservationService.RetrievePnr(recordLocator);
-            if (pnr == null)
+            await _reservationService.RetrievePnr(recordLocator);
+
+            if (_reservationService.Pnr == null)
                 throw new Exception("PNR NOT FOUND");
 
             // Find matching flight segment
-            var segment = pnr.Segments.FirstOrDefault(s => !s.IsSurfaceSegment && s.FlightNumber == flightNumber);
+            var segment = _reservationService.Pnr.Data.Segments.FirstOrDefault(s => !s.IsSurfaceSegment && s.FlightNumber == flightNumber);
             if (segment == null)
                 throw new Exception("FLIGHT SEGMENT NOT FOUND");
 
@@ -187,12 +191,12 @@ namespace Res.Core.Services
             var errors = new List<string>();
 
             // Check in each passenger
-            foreach (var passenger in pnr.Passengers)
+            foreach (var passenger in _reservationService.Pnr.Data.Passengers)
             {
                 try
                 {
                     // Auto-assign seat based on class of service
-                    var ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
+                    var ticket = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
                     if (ticket == null)
                         throw new Exception($"NO TICKET FOUND FOR PASSENGER {passenger.PassengerId}");
 
@@ -357,17 +361,18 @@ namespace Res.Core.Services
         public async Task<Pnr> ValidatePnr(string requestRecordLocator, string requestFrom)
         {
             // 1. Retrieve PNR and validate it exists
-            var pnr = await _reservationService.RetrievePnr(requestRecordLocator);
-            if (pnr == null)
+            await _reservationService.RetrievePnr(requestRecordLocator);
+
+            if (_reservationService.Pnr == null)
                 throw new InvalidOperationException("PNR NOT FOUND");
 
             // 2. Find matching flight segment
-            var segment = pnr.Segments.FirstOrDefault(s => s.Origin == requestFrom);
+            var segment = _reservationService.Pnr.Data.Segments.FirstOrDefault(s => s.Origin == requestFrom);
             if (segment == null)
                 throw new InvalidOperationException("SEGMENT NOT FOUND");
 
             // 3. Validate PNR is ticketed
-            if (pnr.Status != PnrStatus.Ticketed)
+            if (_reservationService.Pnr.Data.Status != PnrStatus.Ticketed)
                 throw new InvalidOperationException("PNR NOT VALID");
 
             // 4. Validate check-in window
@@ -376,9 +381,9 @@ namespace Res.Core.Services
                 throw new InvalidOperationException("NOT IN CHECKIN WINDOW");
 
             // 5. Verify no passengers are already checked in for this segment
-            foreach (var passenger in pnr.Passengers)
+            foreach (var passenger in _reservationService.Pnr.Data.Passengers)
             {
-                var ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
+                var ticket = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
                 if (ticket == null)
                     continue;
 
@@ -394,7 +399,7 @@ namespace Res.Core.Services
                 }
             }
 
-            return pnr;
+            return _reservationService.Pnr;
         }
 
         private async Task ValidateTravelDocuments(List<Ssr> documents, Segment segment)
@@ -457,13 +462,13 @@ namespace Res.Core.Services
         private async Task ValidateSeat(string flightNumber, string seatNumber, Ticket ticket, Pnr pnr, int passengerId)
         {
             // Find segment index
-            var segmentIndex = pnr.Segments.FindIndex(s => s.FlightNumber == flightNumber) + 1;
+            var segmentIndex = pnr.Data.Segments.FindIndex(s => s.FlightNumber == flightNumber) + 1;
             string finalSeatNumber = seatNumber;
 
             // If no seat specified, first check if there's a pre-assigned seat
             if (string.IsNullOrEmpty(seatNumber))
             {
-                var existingSeat = pnr.SeatAssignments.FirstOrDefault(s => s.PassengerId == passengerId &&
+                var existingSeat = pnr.Data.SeatAssignments.FirstOrDefault(s => s.PassengerId == passengerId &&
                                                                            s.SegmentNumber == segmentIndex.ToString());
 
                 if (existingSeat != null)
@@ -473,14 +478,14 @@ namespace Res.Core.Services
                 else
                 {
                     // No pre-assigned seat, get a random one
-                    var segment = pnr.Segments[segmentIndex - 1];
+                    var segment = pnr.Data.Segments[segmentIndex - 1];
                     finalSeatNumber = await AssignRandomSeat(segment.FlightNumber, segment.DepartureDate, segment.BookingClass);
 
                     if (finalSeatNumber == null)
                         throw new Exception("NO SEATS AVAILABLE");
 
                     // Add seat assignment to PNR
-                    pnr.SeatAssignments.Add(new SeatAssignment
+                    pnr.Data.SeatAssignments.Add(new SeatAssignment
                     {
                         PassengerId = passengerId,
                         SegmentNumber = segmentIndex.ToString(),
@@ -491,13 +496,13 @@ namespace Res.Core.Services
             }
 
             // Validate requested seat
-            if (!await _inventoryService.IsValidSeat(flightNumber, pnr.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
+            if (!await _inventoryService.IsValidSeat(flightNumber, pnr.Data.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
                 throw new Exception("INVALID SEAT NUMBER");
 
-            if (!await _inventoryService.IsSeatAvailable(flightNumber, pnr.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
+            if (!await _inventoryService.IsSeatAvailable(flightNumber, pnr.Data.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
                 throw new Exception("SEAT NOT AVAILABLE");
 
-            if (!await _inventoryService.AssignSeat(flightNumber, pnr.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
+            if (!await _inventoryService.AssignSeat(flightNumber, pnr.Data.Segments[segmentIndex - 1].DepartureDate, finalSeatNumber))
                 throw new Exception("UNABLE TO ASSIGN SEAT");
 
             if (!_allocatedSeats.ContainsKey(flightNumber))
@@ -506,7 +511,7 @@ namespace Res.Core.Services
             _allocatedSeats[flightNumber].Add($"{passengerId}-{finalSeatNumber}");
         }
 
-        private void AddSpecialHandlingInstructions(BoardingPass boardingPass, List<Ssr> ssrs, List<string> ssrCodes)
+        private async void AddSpecialHandlingInstructions(BoardingPass boardingPass, List<Ssr> ssrs, List<string> ssrCodes)
         {
             foreach (var ssr in ssrs.Where(s => s.PassengerId == boardingPass.PassengerId))
             {
@@ -527,11 +532,13 @@ namespace Res.Core.Services
             {
                 boardingPass.SecurityMessages.Add($"CHECK-IN SSR: {ssrCode}");
             }
+
+            await _reservationService.CommitPnr();
         }
 
-        private void AddCheckInOsis(Pnr pnr, BoardingPass boardingPass)
+        private async void AddCheckInOsis(Pnr pnr, BoardingPass boardingPass)
         {
-            pnr.OtherServiceInformation.Add(new Osi
+            pnr.Data.OtherServiceInformation.Add(new Osi
             {
                 PnrLocator = pnr.RecordLocator,
                 Category = OsiCategory.OperationalInfo,
@@ -542,7 +549,7 @@ namespace Res.Core.Services
 
             if (boardingPass.HasCheckedBags)
             {
-                pnr.OtherServiceInformation.Add(new Osi
+                pnr.Data.OtherServiceInformation.Add(new Osi
                 {
                     PnrLocator = pnr.RecordLocator,
                     Category = OsiCategory.OperationalInfo,
@@ -551,15 +558,18 @@ namespace Res.Core.Services
                     CreatedDate = DateTime.UtcNow
                 });
             }
+
+            await _reservationService.CommitPnr();
         }
 
         public async Task<bool> CancelCheckIn(string recordLocator, int passengerId, string flightNumber)
         {
-            var pnr = await _reservationService.RetrievePnr(recordLocator);
-            if (pnr == null)
+            await _reservationService.RetrievePnr(recordLocator);
+
+            if (_reservationService.Pnr == null)
                 throw new Exception("PNR NOT FOUND");
 
-            var ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == passengerId);
+            var ticket = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == passengerId);
             if (ticket == null)
                 throw new Exception("TICKET NOT FOUND");
 
@@ -580,16 +590,16 @@ namespace Res.Core.Services
             }
 
             // Add cancellation OSI
-            pnr.OtherServiceInformation.Add(new Osi
+            _reservationService.Pnr.Data.OtherServiceInformation.Add(new Osi
             {
-                PnrLocator = pnr.RecordLocator,
+                PnrLocator = _reservationService.Pnr.RecordLocator,
                 Category = OsiCategory.OperationalInfo,
                 CompanyId = flightNumber.Substring(0, 2),
                 Text = $"CXLD CKIN {DateTime.UtcNow:ddMMMyy/HHmm}",
                 CreatedDate = DateTime.UtcNow
             });
 
-            await _reservationService.CommitPnr(pnr);
+            await _reservationService.CommitPnr();
 
             return true;
         }

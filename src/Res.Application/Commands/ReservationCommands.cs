@@ -29,7 +29,6 @@ namespace Res.Application.Commands
 
         private readonly ICommandParserFactory _commandParserFactory;
 
-        private Pnr? _currentPnr;
         private List<FlightInventory> _searchedFlights;
 
         public ReservationCommands(IReservationService reservationService, ITicketingService ticketingService, IInventoryService inventoryService, IFareService fareService, ISpecialServiceRequestsService specialServiceRequestsService, ICheckInService checkInService, IApisService apisService, IPaymentService paymentService, ISeatService seatService, ICommandParserFactory commandParserFactory)
@@ -44,71 +43,102 @@ namespace Res.Application.Commands
             _seatService = seatService;
             _commandParserFactory = commandParserFactory;
             _inventoryService = inventoryService;
-
-            _currentPnr = null;
         }
+
+        /// <summary>
+        /// Load the current PNR (if there is one) based on the session ID associated with it.
+        /// </summary>
+        private async Task LoadCurrentSession()
+        {
+            _reservationService.UserContext = User;
+
+            if (_reservationService.Pnr == null)
+            {
+                await _reservationService.CreatePnrWorkspace();
+            }
+            else
+            {
+                await _reservationService.LoadCurrentPnr();
+            }
+        }
+
 
         // TODO all the below display the same...
 
         public async Task<CommandResult> ProcessDisplayFareRules()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            if (!_currentPnr.Fares.Any(f => f.IsStored))
+            if (!_reservationService.Pnr.Data.Fares.Any(f => f.IsStored))
                 return new CommandResult { Success = false, Message = "NO STORED FARE" };
 
-            return new CommandResult { Success = true, Response = _currentPnr };
+            return new CommandResult { Success = true, Response = _reservationService.Pnr };
         }
 
         public async Task<CommandResult> ProcessDisplayFareHistory()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            if (!_currentPnr.Fares.Any(f => f.IsStored))
+            if (!_reservationService.Pnr.Data.Fares.Any(f => f.IsStored))
                 return new CommandResult { Success = false, Message = "NO STORED FARE" };
 
-            return new CommandResult { Success = true, Response = _currentPnr };
+            return new CommandResult { Success = true, Response = _reservationService.Pnr };
         }
 
         public async Task<CommandResult> ProcessDisplayFareNotes()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            if (!_currentPnr.Fares.Any(f => f.IsStored))
+            if (!_reservationService.Pnr.Data.Fares.Any(f => f.IsStored))
                 return new CommandResult { Success = false, Message = "NO STORED FARE" };
 
-            return new CommandResult { Success = true, Response = _currentPnr };
+            return new CommandResult { Success = true, Response = _reservationService.Pnr };
         }
 
         public async Task<CommandResult> ProcessFareQuote()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            if (!_currentPnr.Fares.Any(f => f.IsStored))
+            if (!_reservationService.Pnr.Data.Fares.Any(f => f.IsStored))
                 return new CommandResult { Success = false, Message = "NO STORED FARE" };
 
-            return new CommandResult { Success = true, Response = _currentPnr };
+            return new CommandResult { Success = true, Response = _reservationService.Pnr };
         }
 
         public async Task<CommandResult> ProcessTicketing()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
             {
-                var tickets = await _ticketingService.IssueTickets(_currentPnr);
+                var tickets = await _ticketingService.IssueTickets(_reservationService.Pnr);
 
-                _currentPnr.Tickets.AddRange(tickets);
-                _currentPnr.Status = PnrStatus.Ticketed;
+                _reservationService.Pnr.Data.Tickets.AddRange(tickets);
+                _reservationService.Pnr.Data.Status = PnrStatus.Ticketed;
 
-                _currentPnr = await _reservationService.CommitPnr(_currentPnr);
+                await _reservationService.CommitPnr();
 
-                return new CommandResult { Success = true, Response = (tickets, _currentPnr) };
+                return new CommandResult { Success = true, Response = (tickets, _reservationService.Pnr) };
 
             }
             catch (Exception ex)
@@ -147,14 +177,12 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessAddName(string command)
         {
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
             // Format: NM1SMITH/JOHN MR
             try
             {
-                if (_currentPnr == null)
-                {
-                    _currentPnr = await _reservationService.CreatePnrWorkspace(User);
-                }
-
                 // Skip "NM1"
                 var nameDetails = command.Substring(3);
 
@@ -170,9 +198,9 @@ namespace Res.Application.Commands
                 var givenName = givenNameParts[0];
                 var title = givenNameParts.Length > 1 ? givenNameParts[1] : "";
 
-                _currentPnr = await _reservationService.AddName(_currentPnr, surname, givenName, title, PassengerType.Adult);
+                await _reservationService.AddName(surname, givenName, title, PassengerType.Adult);
 
-                var passenger = _currentPnr.Passengers.Last();
+                var passenger = _reservationService.Pnr.Data.Passengers.Last();
 
                 return new CommandResult { Success = true, Message = $"{passenger.PassengerId}. {passenger.LastName}/{passenger.FirstName} {passenger.Title}" };
             }
@@ -184,6 +212,9 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessSellSegment(string command)
         {
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
             try
             {
                 FlightInventory flightToSell;
@@ -230,13 +261,7 @@ namespace Res.Application.Commands
                 }
 
                 // Call service with parsed data
-                var (segment, updatedPnr) = await _reservationService.SellSegment(
-                    _currentPnr,
-                    flightToSell,
-                    bookingClass,
-                    quantity);
-
-                _currentPnr = updatedPnr;
+                var segment = await _reservationService.SellSegment(flightToSell, bookingClass, quantity);
 
                 return new CommandResult { Success = true, Response = segment };
             }
@@ -248,7 +273,10 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessRemoveSegment(string command)
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -256,7 +284,7 @@ namespace Res.Application.Commands
                 // Format: XE1 (removes segment 1)
                 int segmentNumber = int.Parse(command.Substring(2));
 
-                _currentPnr = await _reservationService.RemoveSegment(_currentPnr, segmentNumber);
+                await _reservationService.RemoveSegment(segmentNumber);
 
                 return new CommandResult { Success = true, Message = $"SEGMENT {segmentNumber} REMOVED" };
             }
@@ -268,21 +296,21 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessEndTransactionAndRecall()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO PNR TO END TRANSACTION" };
 
             try
             {
-                var committedPnr = await _reservationService.CommitPnr(_currentPnr);
-
-                // Keep the PNR in context (recall)
-                _currentPnr = committedPnr;
+                await _reservationService.CommitPnr();
 
                 return new CommandResult
                 {
                     Success = true,
-                    Message = $"OK - {_currentPnr.RecordLocator}",
-                    Response = _currentPnr // Return full PNR to display it
+                    Message = $"OK - {_reservationService.Pnr.RecordLocator}",
+                    Response = _reservationService.Pnr // Return full PNR to display it
                 };
             }
             catch (InvalidOperationException ex)
@@ -293,20 +321,25 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessEndTransactionAndClear()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO PNR TO END TRANSACTION" };
 
             try
             {
-                var pnr = await _reservationService.CommitPnr(_currentPnr);
+                await _reservationService.CommitPnr();
+
+                string recordLocator = _reservationService.Pnr.RecordLocator;
 
                 // Clear the PNR from context
-                _currentPnr = null;
+                _reservationService.Pnr = null;
 
                 return new CommandResult
                 {
                     Success = true,
-                    Message = $"OK - {pnr.RecordLocator}"
+                    Message = $"OK - {recordLocator}"
                 };
             }
             catch (InvalidOperationException ex)
@@ -317,31 +350,35 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> AddRemark(string command)
         {
-            if (_currentPnr == null)
-            {
-                _currentPnr = await _reservationService.CreatePnrWorkspace(User);
-            }
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
 
             string remark = command.Substring(3);
 
             if (string.IsNullOrWhiteSpace(remark))
                 throw new ArgumentException("Remark not supplied");
 
-            await _reservationService.AddRemarks(_currentPnr, remark);
+            await _reservationService.AddRemarks(remark);
 
             return new CommandResult { Success = true, Message = "REMARK ADDED" };
         }
 
         public async Task<CommandResult> ProcessDisplay()
         {
-            return _currentPnr != null ? new CommandResult { Success = true, Response = _currentPnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
         }
 
         public async Task<CommandResult> ProcessDisplayPnr(string command)
         {
-            _currentPnr = await _reservationService.RetrievePnr(command.Substring(2));
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
 
-            return _currentPnr != null ? new CommandResult { Success = true, Response = _currentPnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
+            await _reservationService.RetrievePnr(command.Substring(2));
+
+            return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
         }
 
         public async Task<CommandResult> ProcessDisplayAllPnrs()
@@ -353,19 +390,18 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessIgnore()
         {
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            _currentPnr = null;
+            _reservationService.Pnr = null;
 
             return new CommandResult { Success = true, Message = "IGNORED" }; ;
         }
 
         public async Task<CommandResult> AddTicketingArrangement(string command)
         {
-            // Format: TLTL10DEC/BA
-            if (_currentPnr == null)
-                return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
 
             try
             {
@@ -379,10 +415,7 @@ namespace Res.Application.Commands
                 // Get the validating carrier if provided
                 string validatingCarrier = parts.Length > 1 ? parts[1] : null;
 
-                _currentPnr = await _reservationService.AddTicketArrangement(
-                    _currentPnr,
-                    timeLimit,
-                    validatingCarrier);
+                await _reservationService.AddTicketArrangement(timeLimit, validatingCarrier);
 
                 return new CommandResult { Success = true, Message = $"TL ADDED - {timeLimit:ddMMM}" + (validatingCarrier != null ? $" VAL {validatingCarrier}" : "") };
             }
@@ -394,59 +427,46 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessContact(string command)
         {
-            // Format: CTCP 44123456789 or CTCE TEST@EMAIL.COM
-            if (_currentPnr == null)
-                return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
 
-            try
+            var type = command.Substring(3, 1); // P for phone, E for email
+            var value = command.Substring(5).Trim();
+
+            switch (type)
             {
-                var type = command.Substring(3, 1); // P for phone, E for email
-                var value = command.Substring(5).Trim();
+                case "P":
+                    await _reservationService.AddPhone(value);
+                    return new CommandResult { Success = false, Message = $"PHONE ADDED - {value}" };
 
-                switch (type)
-                {
-                    case "P":
-                        _currentPnr = await _reservationService.AddPhone(_currentPnr, value);
-                        return new CommandResult { Success = false, Message = $"PHONE ADDED - {value}" };
+                case "E":
+                    await _reservationService.AddEmail(value);
+                    return new CommandResult { Success = false, Message = $"EMAIL ADDED - {value}" };
 
-                    case "E":
-                        _currentPnr = await _reservationService.AddEmail(_currentPnr, value);
-                        return new CommandResult { Success = false, Message = $"EMAIL ADDED - {value}" };
-
-                    default:
-                        throw new ArgumentException("Invalid contact type");
-                }
-            }
-            catch (Exception)
-            {
-                throw new ArgumentException("INVALID CONTACT FORMAT - USE CTCP PHONE or CTCE EMAIL");
+                default:
+                    throw new ArgumentException("INVALID CONTACT FORMAT - USE CTCP PHONE or CTCE EMAIL");
             }
         }
 
         public async Task<CommandResult> ProcessAgency(string command)
         {
-            // Format: AGY ABC/12345678/JAGENT
-            if (_currentPnr == null)
-                return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
 
-            try
-            {
-                var parser = _commandParserFactory.GetParser<AgencyRequest>();
-                var request = parser.Parse(command);
+            var parser = _commandParserFactory.GetParser<AgencyRequest>();
+            var request = parser.Parse(command);
 
-                _currentPnr = await _reservationService.AddAgency(_currentPnr, request);
+            await _reservationService.AddAgency(request);
 
-                return new CommandResult { Success = true, Message = $"RECEIVED FROM {request.AgencyCode}/{request.IataNumber ?? string.Empty}/{request.AgentId ?? string.Empty}" };
-            }
-            catch (Exception)
-            {
-                throw new ArgumentException("INVALID RECEIVED FROM FORMAT - USE RF CODE/IATA/AGENTID");
-            }
+            return new CommandResult { Success = true, Message = $"RECEIVED FROM {request.AgencyCode}/{request.IataNumber ?? string.Empty}/{request.AgentId ?? string.Empty}" };
         }
 
         public async Task<CommandResult> ProcessPricePnr(string command)
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR TO PRICE" };
 
             try
@@ -455,9 +475,9 @@ namespace Res.Application.Commands
                 var parser = _commandParserFactory.GetParser<PricePnrRequest>();
 
                 // Delegate to the service
-                _currentPnr = await _fareService.PricePnr(_currentPnr, parser.Parse(command));
+                _reservationService.Pnr = await _fareService.PricePnr(_reservationService.Pnr, parser.Parse(command));
 
-                return new CommandResult { Success = true, Response = _currentPnr };
+                return new CommandResult { Success = true, Response = _reservationService.Pnr };
             }
             catch (Exception ex)
             {
@@ -467,10 +487,13 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessStoreFare(string command)
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            if (!_currentPnr.Fares.Any())
+            if (!_reservationService.Pnr.Data.Fares.Any())
                 return new CommandResult { Success = false, Message = "NO FARE TO STORE - USE FXP FIRST" };
 
             try
@@ -478,7 +501,7 @@ namespace Res.Application.Commands
                 var parser = _commandParserFactory.GetParser<StoreFareRequest>();
                 var request = parser.Parse(command);
 
-                _currentPnr = await _fareService.StoreFare(_currentPnr, request);
+                _reservationService.Pnr = await _fareService.StoreFare(_reservationService.Pnr, request);
 
                 var message = new StringBuilder("FARE STORED");
                 if (request.FareSelections.Any())
@@ -501,16 +524,22 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayJson()
         {
-            if (_currentPnr == null)
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            return new CommandResult { Success = true, Response = _currentPnr };
+            return new CommandResult { Success = true, Response = _reservationService.Pnr };
         }
 
         public async Task<CommandResult> ProcessAddSsr(string command)
         {
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
+            await LoadCurrentSession();
+
             // Format: SR WCHR/P1/S1/TXT
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -535,7 +564,7 @@ namespace Res.Application.Commands
                         text = part;
                 }
 
-                _specialServiceRequestsService.Pnr = _currentPnr;
+                _specialServiceRequestsService.Pnr = _reservationService.Pnr;
 
                 await _specialServiceRequestsService.AddSsr(code, passengerId, segmentNumber, text);
 
@@ -551,12 +580,12 @@ namespace Res.Application.Commands
         {
             // Format: SRXK1
 
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
             {
-                _specialServiceRequestsService.Pnr = _currentPnr;
+                _specialServiceRequestsService.Pnr = _reservationService.Pnr;
 
                 await _specialServiceRequestsService.DeleteSsr(Convert.ToInt32(command.Substring(4)));
 
@@ -572,7 +601,7 @@ namespace Res.Application.Commands
         {
             // Format: SR*
 
-            return _currentPnr != null ? new CommandResult { Success = true, Response = _currentPnr.SpecialServiceRequests } : new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr.Data.SpecialServiceRequests } : new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
         }
 
         public async Task<CommandResult> ProcessCheckIn(string command)
@@ -646,7 +675,7 @@ namespace Res.Application.Commands
         public async Task<CommandResult> ProcessAddDocument(string command)
         {
             // Format: SRDOCS HK1/P/GBR/P12345678/GBR/12JUL82/M/20NOV25/SMITH/JOHN
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -667,7 +696,7 @@ namespace Res.Application.Commands
                 var firstName = parts.Length > 9 ? parts[9] : "";
 
                 // Find matching passenger
-                var passenger = _currentPnr.Passengers.FirstOrDefault(p =>
+                var passenger = _reservationService.Pnr.Data.Passengers.FirstOrDefault(p =>
                     p.LastName.Equals(lastName, StringComparison.OrdinalIgnoreCase) &&
                     p.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase));
 
@@ -704,7 +733,7 @@ namespace Res.Application.Commands
         public async Task<CommandResult> ProcessDeleteDocument(string command)
         {
             // Format: SRXD1 - Delete document number 1
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -714,7 +743,7 @@ namespace Res.Application.Commands
 
                 // Since documents are stored per passenger, we need to find which passenger
                 // has this document and remove it
-                foreach (var passenger in _currentPnr.Passengers)
+                foreach (var passenger in _reservationService.Pnr.Data.Passengers)
                 {
                     if (docIndex <= passenger.Documents.Count)
                     {
@@ -722,7 +751,7 @@ namespace Res.Application.Commands
                         passenger.Documents.RemoveAt(docIndex - 1);
 
                         // Also remove corresponding DOCS SSR
-                        var docsSsr = _currentPnr.SpecialServiceRequests
+                        var docsSsr = _reservationService.Pnr.Data.SpecialServiceRequests
                             .FirstOrDefault(ssr =>
                                 ssr.Type == SsrType.Passport &&
                                 ssr.PassengerId == passenger.PassengerId &&
@@ -730,7 +759,7 @@ namespace Res.Application.Commands
 
                         if (docsSsr != null)
                         {
-                            _currentPnr.SpecialServiceRequests.Remove(docsSsr);
+                            _reservationService.Pnr.Data.SpecialServiceRequests.Remove(docsSsr);
                         }
 
                         return new CommandResult { Success = true, Message = $"DOCUMENT {docIndex} DELETED" };
@@ -748,7 +777,7 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessListDocuments()
         {
-            return _currentPnr != null ? new CommandResult { Success = true, Response = _currentPnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
+            return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
         }
 
         public async Task<CommandResult> ProcessCheckInAll(string command)
@@ -783,14 +812,14 @@ namespace Res.Application.Commands
         public async Task<CommandResult> ProcessTicketListDisplay(string command)
         {
             // TKTL - List all tickets in PNR
-            return _currentPnr != null ? new CommandResult { Success = true, Response = _currentPnr } : new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr } : new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
         }
 
         public async Task<CommandResult> ProcessTicketDisplay(string command)
         {
             // TKT/9321234567890 - Display specific ticket
 
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             // Extract ticket number from command (TKT/9321234567890)
@@ -804,9 +833,9 @@ namespace Res.Application.Commands
                 throw new InvalidOperationException("Invalid TKT command");
 
             string ticketNumber = parts[1];
-            var ticket = _currentPnr.Tickets.FirstOrDefault(t => t.TicketNumber == ticketNumber);
+            var ticket = _reservationService.Pnr.Data.Tickets.FirstOrDefault(t => t.TicketNumber == ticketNumber);
 
-            return new CommandResult { Success = true, Response = (ticket, _currentPnr) };
+            return new CommandResult { Success = true, Response = (ticket, _reservationService.Pnr) };
         }
 
         public async Task<CommandResult> ProcessRetrieveByName(string command)
@@ -921,7 +950,7 @@ namespace Res.Application.Commands
             // Format: SRDOCA HK1/R/GBR/123 HIGH STREET/LONDON/GB/W1A 1AA
             try
             {
-                if (_currentPnr == null)
+                if (_reservationService.Pnr == null)
                     return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
                 var parts = command.Substring(6).Split('/');
@@ -944,7 +973,7 @@ namespace Res.Application.Commands
 
                 var ssrText = $"{action}/{paxNum}/{type}/{country}/{street}/{city}/{state}/{postal}";
 
-                _specialServiceRequestsService.Pnr = _currentPnr;
+                _specialServiceRequestsService.Pnr = _reservationService.Pnr;
                 await _specialServiceRequestsService.AddSsr("DOCA", passengerId, 0, ssrText);
 
                 var addressType = type == "R" ? "RESIDENCE" : "DESTINATION";
@@ -962,7 +991,7 @@ namespace Res.Application.Commands
             // FP*CA/GBP892.00 - Cash
             // FP*MS/INVOICE/GBP892.00 - Miscellaneous
 
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -1000,7 +1029,7 @@ namespace Res.Application.Commands
                     throw new ArgumentException("INVALID FOP TYPE - USE CC, CA, or MS");
                 }
 
-                _currentPnr = await _fareService.AddFormOfPayment(_currentPnr, fop);
+                _reservationService.Pnr = await _fareService.AddFormOfPayment(_reservationService.Pnr, fop);
 
                 return new CommandResult { Success = true, Message = "FORM OF PAYMENT ADDED" };
             }
@@ -1014,7 +1043,7 @@ namespace Res.Application.Commands
         {
             try
             {
-                if (_currentPnr == null && !command.Contains("/"))
+                if (_reservationService.Pnr == null && !command.Contains("/"))
                     return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
                 string flightNumber;
@@ -1024,7 +1053,7 @@ namespace Res.Application.Commands
                 if (command.Length == 3) // SM1 format
                 {
                     int segmentNumber = int.Parse(command.Substring(2, 1));
-                    var segment = _currentPnr.Segments[segmentNumber - 1];
+                    var segment = _reservationService.Pnr.Data.Segments[segmentNumber - 1];
                     flightNumber = segment.FlightNumber;
                     departureDate = segment.DepartureDate;
                     bookingClass = segment.BookingClass;
@@ -1036,7 +1065,7 @@ namespace Res.Application.Commands
                     departureDate = parts[1];
                 }
 
-                var seatMap = await _seatService.DisplaySeatMap(_currentPnr, flightNumber, departureDate, bookingClass);
+                var seatMap = await _seatService.DisplaySeatMap(flightNumber, departureDate, bookingClass);
 
                 if (seatMap == null)
                     return new CommandResult { Success = false, Message = "FLIGHT NOT FOUND" };
@@ -1051,7 +1080,7 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessAssignSeat(string command)
         {
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -1064,7 +1093,10 @@ namespace Res.Application.Commands
                 int passengerId = Convert.ToInt32(parts[1].Substring(1)); // Remove 'P'
                 string segmentNumber = parts[2].Substring(1); // Remove 'S'
 
-                await _seatService.AssignSeat(_currentPnr, seatNumber, passengerId, segmentNumber);
+                _seatService.Pnr = _reservationService.Pnr;
+
+                await _seatService.AssignSeat(seatNumber, passengerId, segmentNumber);
+                await _reservationService.CommitPnr();
 
                 return new CommandResult { Success = true, Message = $"SEAT {seatNumber} ASSIGNED" };
             }
@@ -1076,7 +1108,7 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessRemoveSeat(string command)
         {
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
             try
@@ -1088,7 +1120,8 @@ namespace Res.Application.Commands
                 int passengerId = Convert.ToInt32(parts[0].Substring(1)); // Remove 'P'
                 string segmentNumber = parts[1].Substring(1); // Remove 'S'
 
-                await _seatService.RemoveSeat(_currentPnr, passengerId, segmentNumber);
+                await _seatService.RemoveSeat(passengerId, segmentNumber);
+                await _reservationService.CommitPnr();
 
                 return new CommandResult { Success = true, Message = "SEAT ASSIGNMENT REMOVED" };
             }
@@ -1100,30 +1133,12 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessArnk(string command)
         {
-            if (_currentPnr == null)
+            if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            // Create a surface segment
-            var surfaceSegment = new Segment
-            {
-                FlightNumber = "ARNK",
-                Status = SegmentStatus.Confirmed,
-                IsSurfaceSegment = true,
-                Quantity = _currentPnr.Passengers.Count
-            };
+            // TODO add support to add an ARNK after a particular segment - extract the position from the command, e.g. ARNK/2 adds it after the first segment
 
-            // If there are existing segments, connect this surface segment between them
-            if (_currentPnr.Segments.Count > 0)
-            {
-                var lastSegment = _currentPnr.Segments.Last();
-                surfaceSegment.Origin = lastSegment.Destination;
-
-                // The destination will be populated when the next flight segment is added
-                surfaceSegment.DepartureDate = lastSegment.ArrivalDate;
-                surfaceSegment.DepartureTime = lastSegment.ArrivalTime;
-            }
-
-            _currentPnr.Segments.Add(surfaceSegment);
+            await _reservationService.AddArnkSegment(null);
 
             return new CommandResult
             {

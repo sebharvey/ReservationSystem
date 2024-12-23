@@ -440,7 +440,7 @@ namespace Res.Application.ReservationSystem
             return new CommandResult
             {
                 Success = true,
-                Response = output
+                Response = output,
             };
         }
 

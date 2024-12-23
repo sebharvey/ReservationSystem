@@ -16,17 +16,17 @@ namespace Res.Application.Extensions
             int lineNumber = 1;
 
             // Header line
-            var officeId = pnr.Agency?.OfficeId ?? "UNKNWN";
-            var agentId = pnr.Agency?.AgentId ?? "XX";
-            var agencyCode = pnr.Agency?.AgencyCode ?? "XX";
-            var headerDate = pnr.CreatedDate.ToAirlineFormat();
+            var officeId = pnr.Data.Agency?.OfficeId ?? "UNKNWN";
+            var agentId = pnr.Data.Agency?.AgentId ?? "XX";
+            var agencyCode = pnr.Data.Agency?.AgencyCode ?? "XX";
+            var headerDate = pnr.Data.CreatedDate.ToAirlineFormat();
 
             sb.AppendLine($"RP/{officeId}/{agencyCode}                  AGENT/{agentId}       {headerDate}   {pnr.RecordLocator ?? string.Empty}");
 
             // Names
-            foreach (var passenger in pnr.Passengers)
+            foreach (var passenger in pnr.Data.Passengers)
             {
-                var ticket = pnr.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
+                var ticket = pnr.Data.Tickets.FirstOrDefault(t => t.PassengerId == passenger.PassengerId);
                 var ticketInfo = ticket != null ? $" TKT: {ticket.TicketNumber}" : "";
                 var paxType = passenger.Type.ToString().ToUpper();
                 sb.AppendLine($"{lineNumber} {passenger.LastName}/{passenger.FirstName} {passenger.Title}({paxType}){ticketInfo}");
@@ -34,7 +34,7 @@ namespace Res.Application.Extensions
             }
 
             // Segments
-            foreach (var segment in pnr.Segments)
+            foreach (var segment in pnr.Data.Segments)
             {
                 if (segment.IsSurfaceSegment)
                 {
@@ -74,9 +74,9 @@ namespace Res.Application.Extensions
                 lineNumber++;
             }
 
-            if (pnr.SeatAssignments.Any())
+            if (pnr.Data.SeatAssignments.Any())
             {
-                foreach (var seat in pnr.SeatAssignments.OrderBy(s => s.SegmentNumber))
+                foreach (var seat in pnr.Data.SeatAssignments.OrderBy(s => s.SegmentNumber))
                 {
                     sb.AppendLine($"{lineNumber} ST {seat.SeatNumber} P{seat.PassengerId}/S{seat.SegmentNumber}");
                     lineNumber++;
@@ -84,28 +84,28 @@ namespace Res.Application.Extensions
             }
 
             // Contact Information
-            if (!string.IsNullOrEmpty(pnr.Contact?.PhoneNumber))
+            if (!string.IsNullOrEmpty(pnr.Data.Contact?.PhoneNumber))
             {
-                sb.AppendLine($"{lineNumber} AP {pnr.Contact.PhoneNumber}-M");
+                sb.AppendLine($"{lineNumber} AP {pnr.Data.Contact.PhoneNumber}-M");
                 lineNumber++;
             }
-            if (!string.IsNullOrEmpty(pnr.Contact?.EmailAddress))
+            if (!string.IsNullOrEmpty(pnr.Data.Contact?.EmailAddress))
             {
                 // Format email with double slash for Amadeus style
-                var emailFormatted = pnr.Contact.EmailAddress.Replace("@", "//");
+                var emailFormatted = pnr.Data.Contact.EmailAddress.Replace("@", "//");
                 sb.AppendLine($"{lineNumber} AP {emailFormatted}-H");
                 lineNumber++;
             }
 
             // Ticketing Arrangements
-            if (pnr.TicketingInfo.TimeLimit != DateTime.MinValue)
+            if (pnr.Data.TicketingInfo.TimeLimit != DateTime.MinValue)
             {
-                sb.AppendLine($"{lineNumber} TK TL{pnr.TicketingInfo.TimeLimit.ToAirlineFormat()}/");
+                sb.AppendLine($"{lineNumber} TK TL{pnr.Data.TicketingInfo.TimeLimit.ToAirlineFormat()}/");
                 lineNumber++;
             }
 
             // OSI (Other Service Information) grouped by category
-            var groupedOsis = pnr.OtherServiceInformation
+            var groupedOsis = pnr.Data.OtherServiceInformation
                 .OrderBy(osi => osi.Category)
                 .GroupBy(osi => osi.Category);
 
@@ -113,7 +113,7 @@ namespace Res.Application.Extensions
             {
                 foreach (var osi in group)
                 {
-                    var segment = pnr.Segments.FirstOrDefault();
+                    var segment = pnr.Data.Segments.FirstOrDefault();
                     string companyId = osi.CompanyId ?? (segment?.FlightNumber.Substring(0, 2) ?? "YY");
 
                     // Format for different OSI categories
@@ -136,10 +136,10 @@ namespace Res.Application.Extensions
                 }
             }
 
-            // Special Service Requests
-            foreach (var ssr in pnr.SpecialServiceRequests.OrderBy(s => s.Code))
+            // Special Service pnr.Data
+            foreach (var ssr in pnr.Data.SpecialServiceRequests.OrderBy(s => s.Code))
             {
-                var segment = pnr.Segments.FirstOrDefault();
+                var segment = pnr.Data.Segments.FirstOrDefault();
                 if (segment != null)
                 {
                     sb.AppendLine($"{lineNumber} SSR {ssr.Code} {segment.FlightNumber.Substring(0, 2)} HK1 {segment.FlightNumber} {segment.Origin}{segment.Destination}");
@@ -148,23 +148,23 @@ namespace Res.Application.Extensions
             }
 
             // Remarks
-            foreach (var remark in pnr.Remarks)
+            foreach (var remark in pnr.Data.Remarks)
             {
                 sb.AppendLine($"{lineNumber} RM {remark}");
                 lineNumber++;
             }
 
             // Add fare information if exists
-            if (pnr.Fares.Any())
+            if (pnr.Data.Fares.Any())
             {
-                foreach (var fare in pnr.Fares.Where(f => f.IsStored))
+                foreach (var fare in pnr.Data.Fares.Where(f => f.IsStored))
                 {
                     sb.AppendLine($"{lineNumber} FE {fare.FareRestrictions}");
                     lineNumber++;
 
-                    if (!string.IsNullOrEmpty(pnr.FormOfPayment))
+                    if (!string.IsNullOrEmpty(pnr.Data.FormOfPayment))
                     {
-                        var fop = pnr.FormOfPayment.Split("/");
+                        var fop = pnr.Data.FormOfPayment.Split("/");
 
                         switch (fop[0])
                         {
@@ -212,8 +212,8 @@ namespace Res.Application.Extensions
                 var pnr = pnrs[i];
 
                 // Get the first passenger and first segment
-                var passenger = pnr.Passengers.FirstOrDefault();
-                var segment = pnr.Segments.FirstOrDefault();
+                var passenger = pnr.Data.Passengers.FirstOrDefault();
+                var segment = pnr.Data.Segments.FirstOrDefault();
 
                 if (passenger == null || segment == null)
                     continue;
@@ -243,7 +243,7 @@ namespace Res.Application.Extensions
             sb.AppendLine("TRAVEL DOCUMENTS");
             sb.AppendLine(new string('-', 75));
 
-            foreach (var passenger in currentPnr.Passengers)
+            foreach (var passenger in currentPnr.Data.Passengers)
             {
                 if (passenger.Documents.Any())
                 {
@@ -260,7 +260,7 @@ namespace Res.Application.Extensions
                         sb.AppendLine($"   EXPIRY: {doc.ExpiryDate:ddMMMyy}");
 
                         // Find and display associated SSR
-                        var ssr = currentPnr.SpecialServiceRequests
+                        var ssr = currentPnr.Data.SpecialServiceRequests
                             .FirstOrDefault(s =>
                                 s.Type == SsrType.Passport &&
                                 s.PassengerId == passenger.PassengerId &&
@@ -287,7 +287,7 @@ namespace Res.Application.Extensions
 
         public static string OutputTickets(this Pnr currentPnr)
         {
-            if (!currentPnr.Tickets.Any())
+            if (!currentPnr.Data.Tickets.Any())
                 return "NO TICKETS FOUND IN PNR";
 
             var sb = new StringBuilder();
@@ -298,17 +298,17 @@ namespace Res.Application.Extensions
             sb.AppendLine("TICKET NUMBER       PASSENGER                STATUS    ISSUE DATE   FARE");
             sb.AppendLine(new string('-', 75));
 
-            foreach (var ticket in currentPnr.Tickets)
+            foreach (var ticket in currentPnr.Data.Tickets)
             {
-                var passenger = currentPnr.Passengers.First(p => p.PassengerId == ticket.PassengerId);
-                var fare = currentPnr.Fares.First(f => f.PassengerId == ticket.PassengerId);
+                var passenger = currentPnr.Data.Passengers.First(p => p.PassengerId == ticket.PassengerId);
+                var fare = currentPnr.Data.Fares.First(f => f.PassengerId == ticket.PassengerId);
 
                 sb.AppendLine($"{ticket.TicketNumber,-17} {passenger.LastName,-12}/{passenger.FirstName,-8} " +
                               $"{ticket.Status,-9} {ticket.IssueDate:ddMMMyy}   {fare.Currency} {ticket.FareAmount:F2}");
             }
 
             sb.AppendLine(new string('-', 75));
-            sb.AppendLine($"TOTAL TICKETS: {currentPnr.Tickets.Count}");
+            sb.AppendLine($"TOTAL TICKETS: {currentPnr.Data.Tickets.Count}");
 
             return sb.ToString();
         }
@@ -319,11 +319,11 @@ namespace Res.Application.Extensions
 
             sb.AppendLine($"FARE QUOTE RECORD - {DateTime.Now:ddMMMyy}");
 
-            foreach (var fare in pnr.Fares.Where(f => f.IsStored))
+            foreach (var fare in pnr.Data.Fares.Where(f => f.IsStored))
             {
-                var passenger = pnr.Passengers.First(p => p.PassengerId == fare.PassengerId);
+                var passenger = pnr.Data.Passengers.First(p => p.PassengerId == fare.PassengerId);
                 // Filter out ARNK segments
-                var flightSegments = pnr.Segments.Where(s => !s.IsSurfaceSegment).ToList();
+                var flightSegments = pnr.Data.Segments.Where(s => !s.IsSurfaceSegment).ToList();
 
                 sb.AppendLine($"PAX {fare.PassengerId}   {passenger.LastName}/{passenger.FirstName}             {passenger.Type}");
 
@@ -362,8 +362,8 @@ namespace Res.Application.Extensions
             var sb = new StringBuilder();
 
             // Group passengers by type
-            var passengerGroups = pnr.Fares
-                .GroupBy(f => pnr.Passengers.First(p => p.PassengerId == f.PassengerId).Type)
+            var passengerGroups = pnr.Data.Fares
+                .GroupBy(f => pnr.Data.Passengers.First(p => p.PassengerId == f.PassengerId).Type)
                 .OrderBy(g => g.Key);
 
             decimal totalFare = 0;
@@ -396,7 +396,7 @@ namespace Res.Application.Extensions
                     }
 
                     // Show flight segments
-                    var flightSegments = pnr.Segments.Where(s => !s.IsSurfaceSegment).ToList();
+                    var flightSegments = pnr.Data.Segments.Where(s => !s.IsSurfaceSegment).ToList();
                     sb.AppendLine("\nROUTING INFORMATION:");
                     foreach (var segment in flightSegments)
                     {
@@ -427,7 +427,7 @@ namespace Res.Application.Extensions
                 sb.AppendLine($"\nPASSENGERS:");
                 foreach (var fare in group)
                 {
-                    var passenger = pnr.Passengers.First(p => p.PassengerId == fare.PassengerId);
+                    var passenger = pnr.Data.Passengers.First(p => p.PassengerId == fare.PassengerId);
                     sb.AppendLine($"   {passenger.PassengerId}. {passenger.LastName}/{passenger.FirstName} {passenger.Title}");
                 }
 
@@ -435,18 +435,18 @@ namespace Res.Application.Extensions
             }
 
             // Show grand total
-            sb.AppendLine($"\nLOWEST TOTAL FARE: {pnr.Fares.First().Currency} {totalFare:F2}");
+            sb.AppendLine($"\nLOWEST TOTAL FARE: {pnr.Data.Fares.First().Currency} {totalFare:F2}");
 
             // Add exchange rate if applicable
-            var fareWithRate = pnr.Fares.FirstOrDefault(f => !string.IsNullOrEmpty(f.FareRestrictions));
+            var fareWithRate = pnr.Data.Fares.FirstOrDefault(f => !string.IsNullOrEmpty(f.FareRestrictions));
             if (fareWithRate != null)
             {
                 sb.AppendLine($"RATE OF EXCHANGE: {fareWithRate.FareRestrictions}");
             }
 
-            if (pnr.TicketingInfo?.TimeLimit != null)
+            if (pnr.Data.TicketingInfo?.TimeLimit != null)
             {
-                sb.AppendLine($"LAST DATE TO TICKET: {pnr.TicketingInfo.TimeLimit:ddMMMyy}");
+                sb.AppendLine($"LAST DATE TO TICKET: {pnr.Data.TicketingInfo.TimeLimit:ddMMMyy}");
             }
 
             return sb.ToString();
@@ -478,10 +478,10 @@ namespace Res.Application.Extensions
         {
             var sb = new StringBuilder();
 
-            foreach (var fare in pnr.Fares.Where(f => f.IsStored))
+            foreach (var fare in pnr.Data.Fares.Where(f => f.IsStored))
             {
                 sb.AppendLine($"01  FARE BASIS {fare.FareBasis}");
-                foreach (var segment in pnr.Segments)
+                foreach (var segment in pnr.Data.Segments)
                 {
                     sb.AppendLine($"    {segment.Origin}-{segment.Destination}");
                 }
@@ -496,10 +496,10 @@ namespace Res.Application.Extensions
         {
             var sb = new StringBuilder();
 
-            foreach (var fare in pnr.Fares.Where(f => f.IsStored))
+            foreach (var fare in pnr.Data.Fares.Where(f => f.IsStored))
             {
-                sb.AppendLine($"01  {pnr.CreatedDate:ddMMMyy HHmm}Z  STORED FARE");
-                sb.AppendLine($"    AGENT {pnr.Agency.AgentId}/{pnr.Agency.OfficeId}");
+                sb.AppendLine($"01  {pnr.Data.CreatedDate:ddMMMyy HHmm}Z  STORED FARE");
+                sb.AppendLine($"    AGENT {pnr.Data.Agency.AgentId}/{pnr.Data.Agency.OfficeId}");
                 if (fare.LastDateToTicket.HasValue)
                 {
                     sb.AppendLine($"    LAST DATE TO TICKET {fare.LastDateToTicket.Value:ddMMMyy}");
@@ -513,7 +513,7 @@ namespace Res.Application.Extensions
         {
             var sb = new StringBuilder();
 
-            foreach (var segment in pnr.Segments)
+            foreach (var segment in pnr.Data.Segments)
             {
                 sb.AppendLine($"BOOKING CLASS {segment.BookingClass}");
                 sb.AppendLine("SEASON LOW");

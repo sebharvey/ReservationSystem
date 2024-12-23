@@ -21,7 +21,7 @@ namespace Res.Core.Services
             if (pnr == null)
                 throw new Exception("PNR NOT FOUND");
 
-            var segment = pnr.Segments.FirstOrDefault(s => s.FlightNumber == flightNumber);
+            var segment = _reservationService.Pnr.Data.Segments.FirstOrDefault(s => s.FlightNumber == flightNumber);
             if (segment == null)
                 throw new Exception("FLIGHT NOT FOUND IN PNR");
 
@@ -33,10 +33,10 @@ namespace Res.Core.Services
                 Passengers = new List<PassengerApis>()
             };
 
-            foreach (var passenger in pnr.Passengers)
+            foreach (var passenger in _reservationService.Pnr.Data.Passengers)
             {
                 // Find DOCS SSR for this passenge
-                var docsSsr = pnr.SpecialServiceRequests.FirstOrDefault(ssr =>
+                var docsSsr = _reservationService.Pnr.Data.SpecialServiceRequests.FirstOrDefault(ssr =>
                     ssr.Code == "DOCS" &&
                     ssr.PassengerId == passenger.PassengerId);
 
@@ -48,7 +48,7 @@ namespace Res.Core.Services
                 var docsParts = docsSsr.Text.Split('/');
 
                 // Find address SSR
-                var addressSsr = pnr.SpecialServiceRequests.FirstOrDefault(ssr =>
+                var addressSsr = _reservationService.Pnr.Data.SpecialServiceRequests.FirstOrDefault(ssr =>
                     ssr.Code == "DOCA" &&
                     ssr.PassengerId == passenger.PassengerId);
 

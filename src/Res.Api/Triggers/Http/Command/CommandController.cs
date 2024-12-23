@@ -125,7 +125,7 @@ namespace Res.Api.Triggers.Http.Command
 
                 if (!result.Success)
                 {
-                    return new BadRequestObjectResult(new { error = result.Message });
+                    return new BadRequestObjectResult(new { error = result.Message, SessionId = result.SessionId });
                 }
 
                 // Return command response

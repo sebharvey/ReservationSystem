@@ -14,7 +14,7 @@ namespace Res.Application.Extensions
 
             foreach (var ticket in tickets)
             {
-                var passenger = pnr.Passengers.First(p => p.PassengerId == ticket.PassengerId);
+                var passenger = pnr.Data.Passengers.First(p => p.PassengerId == ticket.PassengerId);
                 sb.AppendLine($"PAX {passenger.LastName}/{passenger.FirstName}");
                 sb.AppendLine($"TKT: {ticket.TicketNumber}");
 
@@ -32,15 +32,15 @@ namespace Res.Application.Extensions
         public static string OutputTicket(this Ticket ticket, Pnr pnr)
         {
             var sb = new StringBuilder();
-            var passenger = pnr.Passengers.First(p => p.PassengerId == ticket.PassengerId);
-            var fare = pnr.Fares.First(f => f.PassengerId == ticket.PassengerId);
+            var passenger = pnr.Data.Passengers.First(p => p.PassengerId == ticket.PassengerId);
+            var fare = pnr.Data.Fares.First(f => f.PassengerId == ticket.PassengerId);
 
             // Header section
             sb.AppendLine(new string('-', 75));
             sb.AppendLine($"ELECTRONIC TICKET DISPLAY        {DateTime.Now:dd-MMM-yy HH:mm}");
             sb.AppendLine(new string('-', 75));
 
-            var ticketFop = pnr.FormOfPayment.Split("/");
+            var ticketFop = pnr.Data.FormOfPayment.Split("/");
 
             // Ticket information
             sb.AppendLine($"TICKET:     {ticket.TicketNumber}");
@@ -48,7 +48,7 @@ namespace Res.Application.Extensions
             sb.AppendLine($"PASSENGER:  {passenger.LastName}/{passenger.FirstName} {passenger.Title}");
             sb.AppendLine($"PNR:        {ticket.PnrLocator}");
             sb.AppendLine($"ISSUED BY:  {ticket.IssuingOffice}");
-            sb.AppendLine($"IATA:       {pnr.Agency.IataNumber}");
+            sb.AppendLine($"IATA:       {pnr.Data.Agency.IataNumber}");
             sb.AppendLine($"FOP:        {PaymentHelper.MaskCreditCard(ticketFop[1], ticketFop[2], ticketFop[3])} {ticketFop[4]}");
             sb.AppendLine($"FARE:       {fare.Currency} {ticket.FareAmount:F2}");
             sb.AppendLine($"STATUS:     {ticket.Status}");
@@ -81,9 +81,9 @@ namespace Res.Application.Extensions
             sb.AppendLine(new string('-', 75));
             sb.AppendLine(GenerateFareCalculation(ticket, pnr));
 
-            if (!string.IsNullOrEmpty(pnr.FormOfPayment))
+            if (!string.IsNullOrEmpty(pnr.Data.FormOfPayment))
             {
-                var fop = pnr.FormOfPayment.Split("/");
+                var fop = pnr.Data.FormOfPayment.Split("/");
                 string paymentInfo = fop[0] switch
                 {
                     "CC" => PaymentHelper.MaskCreditCard(fop[1], fop[2], fop[3]),
@@ -99,8 +99,8 @@ namespace Res.Application.Extensions
 
         private static string GenerateFareCalculation(Ticket ticket, Pnr pnr)
         {
-            var segments = pnr.Segments;
-            var fare = pnr.Fares.First(f => f.PassengerId == ticket.PassengerId);
+            var segments = pnr.Data.Segments;
+            var fare = pnr.Data.Fares.First(f => f.PassengerId == ticket.PassengerId);
 
             var route = string.Join(" ", segments.Select(s => $"{s.Origin} {s.FlightNumber} {s.BookingClass} {s.Destination}"));
             return $"{route} {fare.FareAmount:F2}NUC{fare.FareAmount:F2}END ROE1.0";

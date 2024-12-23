@@ -5,7 +5,6 @@
         public bool Success { get; set; }
         public object Response { get; set; }
         public string Message { get; set; }
-        //public CommandType CommandType { get; set; }
-        public Dictionary<string, string> Parameters { get; set; }
+        public Guid? SessionId { get; set; }
     }
 }

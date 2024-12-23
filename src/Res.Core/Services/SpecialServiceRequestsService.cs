@@ -69,17 +69,17 @@ namespace Res.Core.Services
                 throw new ArgumentException($"Invalid SSR code: {code}");
 
             // Validate passenger if specified
-            if (!Pnr.Passengers.Any(p => Convert.ToInt32(p.PassengerId) == passengerId))
+            if (!Pnr.Data.Passengers.Any(p => Convert.ToInt32(p.PassengerId) == passengerId))
                 throw new ArgumentException($"Invalid passenger ID: {passengerId}");
 
             // Validate segment if specified
-            if (segmentNumber > 0 && segmentNumber > Pnr.Segments.Count)
+            if (segmentNumber > 0 && segmentNumber > Pnr.Data.Segments.Count)
                 throw new ArgumentException($"Invalid segment number: {segmentNumber}");
 
             // Create new SSR
             var ssr = new Ssr
             {
-                Id = Convert.ToInt32(Pnr.SpecialServiceRequests.Count + 1),
+                Id = Convert.ToInt32(Pnr.Data.SpecialServiceRequests.Count + 1),
                 PnrLocator = Pnr.RecordLocator,
                 PassengerId = Convert.ToInt32(passengerId),
                 SegmentNumber = Convert.ToInt32(segmentNumber),
@@ -89,7 +89,7 @@ namespace Res.Core.Services
                 Status = SsrStatus.Requested,
                 CreatedDate = DateTime.UtcNow,
                 ActionCode = "NN", // Need
-                CompanyId = Pnr.Segments.FirstOrDefault()?.FlightNumber.Substring(0, 2) ?? "YY",
+                CompanyId = Pnr.Data.Segments.FirstOrDefault()?.FlightNumber.Substring(0, 2) ?? "YY",
                 Quantity = 1
             };
 
@@ -132,19 +132,19 @@ namespace Res.Core.Services
                     break;
             }
 
-            Pnr.SpecialServiceRequests.Add(ssr);
+            Pnr.Data.SpecialServiceRequests.Add(ssr);
 
             return true;
         }
 
         public async Task<bool> DeleteSsr(int ssrId)
         {
-            var ssr = Pnr.SpecialServiceRequests.FirstOrDefault(s => s.Id == ssrId);
+            var ssr = Pnr.Data.SpecialServiceRequests.FirstOrDefault(s => s.Id == ssrId);
 
             if (ssr == null)
                 throw new ArgumentException($"SSR not found: {ssrId}");
 
-            Pnr.SpecialServiceRequests.Remove(ssr);
+            Pnr.Data.SpecialServiceRequests.Remove(ssr);
 
             return true;
         }
