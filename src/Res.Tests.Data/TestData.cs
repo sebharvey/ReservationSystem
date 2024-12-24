@@ -240,6 +240,7 @@ namespace Res.Tests.Data
                 "ER",
                 "CKIN {PNR}/P1/VS003",
                 "CKIN {PNR}/P2/VS003",
+                "ER",
                 "IG",
             });
 
@@ -256,6 +257,7 @@ namespace Res.Tests.Data
                 "FP*CC/VISA/4166676667666746/0625/GBP892.00",
                 "ER",
                 "TTP",
+                "ER",
                 "IG",
             });
         }

@@ -10,6 +10,7 @@ using Res.Domain.Responses;
 using System.Globalization;
 using System.Text;
 using Res.Application.Parsers.Factory;
+using Res.Core.Services;
 
 namespace Res.Application.Commands
 {
@@ -393,7 +394,7 @@ namespace Res.Application.Commands
             if (_reservationService.Pnr == null)
                 return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
 
-            _reservationService.Pnr = null;
+            await _reservationService.IgnoreSession();
 
             return new CommandResult { Success = true, Message = "IGNORED" }; ;
         }

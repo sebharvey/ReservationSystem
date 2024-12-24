@@ -489,5 +489,22 @@ namespace Res.Core.Services
 
             return true;
         }
+
+        public async Task IgnoreSession()
+        {
+            // Clear the current workspace
+            Pnr = null;
+
+            //Load the one with the current session ID and remove the session data
+            var pnr = await _pnrRepository.GetBySessionId(UserContext.SessionId);
+
+            if (pnr != null)
+            {
+                pnr.SessionId = null;
+                pnr.SessionTimestamp = null;
+
+                await _pnrRepository.Save(pnr);
+            }
+        }
     }
 }

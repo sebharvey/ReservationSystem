@@ -173,7 +173,7 @@ namespace Res.Infrastructure.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding PNR {RecordLocator}", pnr.RecordLocator);
+                _logger.LogError(ex, $"Error adding PNR - {ex.Message}");
                 throw;
             }
         }

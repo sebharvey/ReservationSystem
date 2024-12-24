@@ -31,5 +31,6 @@ namespace Res.Core.Interfaces
         Task<bool> DeletePnr(string recordLocator);
         Task<Pnr?> LoadCurrentPnr();
         Task<bool> AddArnkSegment(int? position);
+        Task IgnoreSession();
     }
 }
