@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Res.Microservices.Fares.Application.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace Res.Microservices.Fares.Infrastructure.Services
 {
@@ -21,10 +21,9 @@ namespace Res.Microservices.Fares.Infrastructure.Services
 
             // Extract key information from the prompt
             var timeOfDay = ExtractTimeOfDay(prompt);
-            var cabinClass = ExtractCabinClass(prompt);
             var occupancyPercentage = ExtractOccupancyPercentage(prompt);
 
-            var response = GenerateMockResponse(timeOfDay, cabinClass, occupancyPercentage);
+            var response = GenerateMockResponse(timeOfDay, occupancyPercentage);
             return Task.FromResult(response);
         }
 
@@ -34,13 +33,6 @@ namespace Res.Microservices.Fares.Infrastructure.Services
             if (prompt.Contains("AFTERNOON")) return "AFTERNOON";
             if (prompt.Contains("EVENING")) return "EVENING";
             return "NIGHT";
-        }
-
-        private string ExtractCabinClass(string prompt)
-        {
-            if (prompt.Contains("Cabin Class: J")) return "J";
-            if (prompt.Contains("Cabin Class: W")) return "W";
-            return "Y";
         }
 
         private double ExtractOccupancyPercentage(string prompt)
@@ -53,11 +45,12 @@ namespace Res.Microservices.Fares.Infrastructure.Services
             return 50.0; // Default occupancy
         }
 
-        private string GenerateMockResponse(string timeOfDay, string cabinClass, double occupancy)
+        private string GenerateMockResponse(string timeOfDay, double occupancy)
         {
             // Base fares for different cabin classes
             var baseFares = new Dictionary<string, (decimal adult, decimal child)>
             {
+                { "F", (8000m, 6000m) },
                 { "J", (4500m, 3375m) },
                 { "W", (2200m, 1650m) },
                 { "Y", (1200m, 900m) }
@@ -72,66 +65,86 @@ namespace Res.Microservices.Fares.Infrastructure.Services
                 { "NIGHT", 0.85m }
             };
 
-            // Occupancy adjustments
-            var occupancyMultiplier = occupancy switch
+            // Build the response for all cabin classes
+            var cabins = new Dictionary<string, Dictionary<string, object>>();
+            foreach (var fare in baseFares)
             {
-                > 80 => 1.2m,
-                > 60 => 1.1m,
-                > 40 => 1.0m,
-                _ => 0.9m
-            };
+                var cabinClass = fare.Key;
+                var timeMultiplier = timeAdjustments[timeOfDay];
 
-            // Calculate adjusted fares
-            var (baseAdultFare, baseChildFare) = baseFares[cabinClass];
-            var timeMultiplier = timeAdjustments[timeOfDay];
+                // Occupancy adjustments
+                var occupancyMultiplier = occupancy switch
+                {
+                    > 80 => 1.2m,
+                    > 60 => 1.1m,
+                    > 40 => 1.0m,
+                    _ => 0.9m
+                };
 
-            var adjustedAdultFare = Math.Round(baseAdultFare * timeMultiplier * occupancyMultiplier, 2);
-            var adjustedChildFare = Math.Round(baseChildFare * timeMultiplier * occupancyMultiplier, 2);
+                // Calculate fares
+                var baseAdultFare = Math.Round(fare.Value.adult * timeMultiplier * occupancyMultiplier, 2);
+                var baseChildFare = Math.Round(fare.Value.child * timeMultiplier * occupancyMultiplier, 2);
+                var adultTax = Math.Round(baseAdultFare * 0.1m, 2);
+                var childTax = Math.Round(baseChildFare * 0.1m, 2);
 
-            var adultTax = Math.Round(adjustedAdultFare * 0.1m, 2);
-            var childTax = Math.Round(adjustedChildFare * 0.1m, 2);
+                var totalSeats = GetTotalSeats(cabinClass);
+                var availableSeats = GetAvailableSeats(cabinClass, occupancy);
+                var cabinOccupancy = ((totalSeats - availableSeats) / (double)totalSeats) * 100;
 
-            return $$"""
-            {
-                "pricing": [
+                // Create the cabin pricing data
+                cabins[cabinClass] = new Dictionary<string, object>
+                {
+                    ["pricing"] = new[]
                     {
-                        "passengerType": "ADT",
-                        "quantity": 2,
-                        "baseFare": {{adjustedAdultFare}},
-                        "taxes": {{adultTax}},
-                        "total": {{adjustedAdultFare + adultTax}}
+                        new
+                        {
+                            passengerType = "ADT",
+                            quantity = 2,
+                            baseFare = baseAdultFare,
+                            taxes = adultTax,
+                            total = baseAdultFare + adultTax
+                        },
+                        new
+                        {
+                            passengerType = "CHD",
+                            quantity = 1,
+                            baseFare = baseChildFare,
+                            taxes = childTax,
+                            total = baseChildFare + childTax
+                        }
                     },
+                    ["totalItinerary"] = (baseAdultFare + adultTax) * 2 + (baseChildFare + childTax),
+                    ["cabinDetails"] = new
                     {
-                        "passengerType": "CHD",
-                        "quantity": 1,
-                        "baseFare": {{adjustedChildFare}},
-                        "taxes": {{childTax}},
-                        "total": {{adjustedChildFare + childTax}}
-                    }
-                ],
-                "totalItinerary": {{(adjustedAdultFare + adultTax) * 2 + (adjustedChildFare + childTax)}},
-                "cabinDetails": {
-                    "cabinClass": "{{cabinClass}}",
-                    "totalSeats": {{GetTotalSeats(cabinClass)}},
-                    "availableSeats": {{GetAvailableSeats(cabinClass, occupancy)}},
-                    "occupancyPercentage": {{occupancy}},
-                    "demandLevel": "{{GetDemandLevel(occupancy)}}"
-                },
-                "pricingFactors": {
-                    "seasonality": "{{GetSeasonality()}}",
-                    "demandLevel": "{{GetDemandLevel(occupancy)}}",
-                    "competitionLevel": "{{GetCompetitionLevel()}}",
-                    "daysUntilDeparture": {{_random.Next(30, 180)}},
-                    "cabinLoadFactor": {{occupancy}},
-                    "timeOfDay": "{{timeOfDay}}"
-                },
-                "explanation": "{{GenerateExplanation(timeOfDay, cabinClass, occupancy)}}"
+                        cabinClass = cabinClass,
+                        totalSeats = totalSeats,
+                        availableSeats = availableSeats,
+                        occupancyPercentage = Math.Round(cabinOccupancy, 1),
+                        demandLevel = GetDemandLevel(cabinOccupancy)
+                    },
+                    ["pricingFactors"] = new
+                    {
+                        seasonality = GetSeasonality(),
+                        demandLevel = GetDemandLevel(occupancy),
+                        competitionLevel = GetCompetitionLevel(),
+                        daysUntilDeparture = _random.Next(30, 180),
+                        cabinLoadFactor = Math.Round(occupancy, 1),
+                        timeOfDay = timeOfDay
+                    },
+                    ["explanation"] = GenerateExplanation(timeOfDay, cabinClass, occupancy)
+                };
             }
-            """;
+
+            // Serialize to JSON
+            return System.Text.Json.JsonSerializer.Serialize(cabins, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
         }
 
         private int GetTotalSeats(string cabinClass) => cabinClass switch
         {
+            "F" => 8,
             "J" => 48,
             "W" => 56,
             "Y" => 200,
@@ -174,6 +187,7 @@ namespace Res.Microservices.Fares.Infrastructure.Services
             var timePhrase = timeOfDay.ToLower();
             var cabinPhrase = cabinClass switch
             {
+                "F" => "First Class",
                 "J" => "Business Class",
                 "W" => "Premium Economy",
                 _ => "Economy"
