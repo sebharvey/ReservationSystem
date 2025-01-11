@@ -31,12 +31,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Website", "Website", "{2080
 		Website\CheckIn.html = Website\CheckIn.html
 		Website\Details.html = Website\Details.html
 		Website\Header.html = Website\Header.html
-		Website\Order.html = Website\Order.html
 		Website\index.html = Website\index.html
+		Website\Order.html = Website\Order.html
 		Website\Seats.html = Website\Seats.html
 		Website\Status.html = Website\Status.html
 		Website\Terminal.html = Website\Terminal.html
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Res.Microservices.Fares", "Res.Microservices.Fares\Res.Microservices.Fares.csproj", "{E61A30AA-D1EA-40B1-8A63-3C68EE570C52}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -76,6 +78,10 @@ Global
 		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13530985-2F38-43A4-839F-EE1BD3A5B3E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E61A30AA-D1EA-40B1-8A63-3C68EE570C52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E61A30AA-D1EA-40B1-8A63-3C68EE570C52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E61A30AA-D1EA-40B1-8A63-3C68EE570C52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E61A30AA-D1EA-40B1-8A63-3C68EE570C52}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

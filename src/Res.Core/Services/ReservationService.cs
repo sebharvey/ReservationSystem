@@ -207,7 +207,7 @@ namespace Res.Core.Services
             // Validate PNR has minimum required elements
             if (Pnr == null)
                 throw new ArgumentNullException(nameof(Pnr));
-            
+
             if (!Pnr.Data.Passengers.Any())
                 throw new InvalidOperationException("PNR must have at least one passenger");
 
@@ -338,7 +338,7 @@ namespace Res.Core.Services
 
         public async Task<bool> RetrievePnr(string recordLocator)
         {
-            await _pnrRepository.GetByRecordLocator(recordLocator.ToUpper());
+            Pnr = await _pnrRepository.GetByRecordLocator(recordLocator.ToUpper());
 
             if (Pnr == null)
                 throw new InvalidOperationException($"No PNR loaded - {recordLocator}");

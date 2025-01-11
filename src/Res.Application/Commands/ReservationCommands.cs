@@ -53,6 +53,7 @@ namespace Res.Application.Commands
         {
             _reservationService.UserContext = User;
 
+            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             if (_reservationService.Pnr == null)
             {
                 await _reservationService.CreatePnrWorkspace();
@@ -68,7 +69,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayFareRules()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -82,7 +82,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayFareHistory()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -96,7 +95,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayFareNotes()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -110,7 +108,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessFareQuote()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -124,7 +121,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessTicketing()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -178,7 +174,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessAddName(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             // Format: NM1SMITH/JOHN MR
@@ -213,7 +208,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessSellSegment(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             try
@@ -274,7 +268,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessRemoveSegment(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -297,7 +290,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessEndTransactionAndRecall()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -322,7 +314,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessEndTransactionAndClear()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -351,7 +342,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> AddRemark(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             string remark = command.Substring(3);
@@ -366,7 +356,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplay()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             return _reservationService.Pnr != null ? new CommandResult { Success = true, Response = _reservationService.Pnr } : new CommandResult { Success = false, Message = "NO PNR FOUND" };
@@ -374,7 +363,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayPnr(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             await _reservationService.RetrievePnr(command.Substring(2));
@@ -391,8 +379,7 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessIgnore()
         {
-            if (_reservationService.Pnr == null)
-                return new CommandResult { Success = false, Message = "NO ACTIVE PNR" };
+            _reservationService.UserContext = User;
 
             await _reservationService.IgnoreSession();
 
@@ -401,7 +388,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> AddTicketingArrangement(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             try
@@ -428,7 +414,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessContact(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             var type = command.Substring(3, 1); // P for phone, E for email
@@ -451,7 +436,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessAgency(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             var parser = _commandParserFactory.GetParser<AgencyRequest>();
@@ -464,7 +448,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessPricePnr(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -488,7 +471,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessStoreFare(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -525,7 +507,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessDisplayJson()
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             if (_reservationService.Pnr == null)
@@ -536,7 +517,6 @@ namespace Res.Application.Commands
 
         public async Task<CommandResult> ProcessAddSsr(string command)
         {
-            // If no PNR is loaded into the PNR object, create a new one assigned to the user's session
             await LoadCurrentSession();
 
             // Format: SR WCHR/P1/S1/TXT
