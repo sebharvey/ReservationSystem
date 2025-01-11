@@ -1,8 +1,9 @@
-using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Res.Microservices.Fares.Application.DTOs;
 using Res.Microservices.Fares.Application.Interfaces;
+using System.Text;
+using System.Text.Json;
 
 namespace Res.Microservices.Fares.Application.Services
 {
@@ -35,60 +36,63 @@ namespace Res.Microservices.Fares.Application.Services
 
         private async Task<FlightPricingDto> GetFlightPricing(PricingRequestDto request, FlightRequestDto flight)
         {
-            var cabinPricingTasks = flight.CabinInventory
-                .Select(async cabin =>
+            var cacheKey = GenerateCacheKey(request, flight);
+
+            if (_cache.TryGetValue(cacheKey, out Dictionary<string, CabinPricingDto> cabinPricings))
+            {
+                return new FlightPricingDto
                 {
-                    var cacheKey = GenerateCacheKey(request, flight, cabin.Key);
+                    FlightNumber = flight.FlightNumber,
+                    DepartureTime = flight.DepartureTime,
+                    Cabins = cabinPricings
+                };
+            }
 
-                    if (!_cache.TryGetValue(cacheKey, out CabinPricingDto cabinPricing))
-                    {
-                        var prompt = BuildPricingPrompt(request, flight, cabin.Key);
-                        var claudeResponse = await _claudeClient.GetPricingResponse(prompt);
-                        cabinPricing = JsonSerializer.Deserialize<CabinPricingDto>(claudeResponse);
+            var prompt = BuildPricingPrompt(request, flight);
+            var claudeResponse = await _claudeClient.GetPricingResponse(prompt);
+            var allCabinPricing = JsonSerializer.Deserialize<Dictionary<string, CabinPricingDto>>(claudeResponse);
 
-                        var cacheOptions = new MemoryCacheEntryOptions()
-                            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
 
-                        _cache.Set(cacheKey, cabinPricing, cacheOptions);
-                    }
-
-                    return new KeyValuePair<string, CabinPricingDto>(cabin.Key, cabinPricing);
-                });
-
-            var cabinPricings = await Task.WhenAll(cabinPricingTasks);
+            _cache.Set(cacheKey, allCabinPricing, cacheOptions);
 
             return new FlightPricingDto
             {
                 FlightNumber = flight.FlightNumber,
                 DepartureTime = flight.DepartureTime,
-                Cabins = cabinPricings.ToDictionary(x => x.Key, x => x.Value)
+                Cabins = allCabinPricing
             };
         }
 
-        private string BuildPricingPrompt(
-            PricingRequestDto request,
-            FlightRequestDto flight,
-            string cabinClass)
+        private string BuildPricingPrompt(PricingRequestDto request, FlightRequestDto flight)
         {
-            var inventory = flight.CabinInventory[cabinClass];
             var timeOfDay = GetTimeOfDay(flight.DepartureTime);
             var timeBasedDiscount = CalculateTimeBasedDiscount(flight.DepartureTime);
-            var occupancyPercentage = ((inventory.TotalSeats - inventory.AvailableSeats) / (double)inventory.TotalSeats) * 100;
 
-            return $@"You are an airline pricing expert. Please provide competitive fare recommendations for the following flight:
+            var cabinDetails = new StringBuilder();
+            foreach (var cabin in flight.CabinInventory)
+            {
+                var inventory = cabin.Value;
+                var occupancyPercentage = ((inventory.TotalSeats - inventory.AvailableSeats) / (double)inventory.TotalSeats) * 100;
+
+                cabinDetails.AppendLine($"\n{cabin.Key} Class Inventory:");
+                cabinDetails.AppendLine($"- Total Seats: {inventory.TotalSeats}");
+                cabinDetails.AppendLine($"- Available Seats: {inventory.AvailableSeats}");
+                cabinDetails.AppendLine($"- Current Occupancy: {occupancyPercentage:F1}%");
+                cabinDetails.AppendLine(GetCabinClassGuidelines(cabin.Key));
+            }
+
+            return $@"You are an airline pricing expert. Please provide competitive fare recommendations for all cabin classes on the following flight:
 
 Route: {request.Origin}-{request.Destination}
 Date: {request.TravelDate.ToShortDateString()}
 Flight: {flight.FlightNumber}
-Departure Time: {flight.DepartureTime:hh\\:mm}
+Departure Time: {flight.DepartureTime.ToString(@"hh\:mm")}
 Time of Day: {timeOfDay} (Apply {timeBasedDiscount}% discount to base fares)
-Cabin Class: {cabinClass}
 Passenger Mix: {string.Join(",", request.Passengers.Select(p => $"{p.PtcCode}{p.Quantity}"))}
 
-Cabin Inventory:
-- Total Seats: {inventory.TotalSeats}
-- Available Seats: {inventory.AvailableSeats}
-- Current Occupancy: {occupancyPercentage:F1}%
+{cabinDetails}
 
 Consider the following factors in your pricing:
 1. Seasonality (peak/off-peak)
@@ -100,9 +104,6 @@ Consider the following factors in your pricing:
 7. Current cabin occupancy (higher prices as occupancy increases)
 8. Time of day pricing (apply specified discount)
 9. Available inventory
-
-Cabin Class Guidelines:
-{GetCabinClassGuidelines(cabinClass)}
 
 Time-Based Pricing Rules:
 - Morning (05:00-11:59): Standard pricing
@@ -120,7 +121,21 @@ Child Fare Rules:
 - Ages 2-11: 75% of adult fare
 - Under 2 (infant): 10% of adult fare when on lap
 
-Please provide pricing recommendations in JSON format following this exact structure (use realistic market prices for the route and cabin):
+Please provide pricing recommendations for all cabin classes in JSON format. The response should be a dictionary with cabin class codes as keys:
+{{
+    ""F"": {{
+        ""pricing"": [...],
+        ""totalItinerary"": number,
+        ""cabinDetails"": {{...}},
+        ""pricingFactors"": {{...}},
+        ""explanation"": ""string""
+    }},
+    ""J"": {{...}},
+    ""W"": {{...}},
+    ""Y"": {{...}}
+}}
+
+For each cabin class, use this structure:
 {{
     ""pricing"": [
         {{
@@ -133,54 +148,54 @@ Please provide pricing recommendations in JSON format following this exact struc
     ],
     ""totalItinerary"": number,
     ""cabinDetails"": {{
-        ""cabinClass"": ""{cabinClass}"",
-        ""totalSeats"": {inventory.TotalSeats},
-        ""availableSeats"": {inventory.AvailableSeats},
-        ""occupancyPercentage"": {occupancyPercentage:F1},
+        ""cabinClass"": ""string"",
+        ""totalSeats"": number,
+        ""availableSeats"": number,
+        ""occupancyPercentage"": number,
         ""demandLevel"": ""string""
     }},
     ""pricingFactors"": {{
         ""seasonality"": ""string"",
         ""demandLevel"": ""string"",
         ""competitionLevel"": ""string"",
-        ""daysUntilDeparture"": {(request.TravelDate - DateTime.Now).Days},
-        ""cabinLoadFactor"": {occupancyPercentage:F1},
-        ""timeOfDay"": ""{timeOfDay}""
+        ""daysUntilDeparture"": number,
+        ""cabinLoadFactor"": number,
+        ""timeOfDay"": ""string""
     }},
     ""explanation"": ""string""
 }}
 
 Ensure that:
-1. Pricing reflects the current occupancy level ({occupancyPercentage:F1}%)
-2. Time of day discount of {timeBasedDiscount}% is applied
+1. Each cabin class's pricing reflects its current occupancy level
+2. Time of day discount of {timeBasedDiscount}% is applied to all cabins
 3. Taxes are calculated at 10% of base fare
 4. Child fares follow the specified rules
-5. Explanation includes key factors affecting the price";
+5. Each explanation includes key factors affecting the price for that cabin";
         }
 
         private string GetCabinClassGuidelines(string cabinClass)
         {
             return cabinClass switch
             {
-                "F" => @"First Class Pricing:
+                "F" => @"First Class Guidelines:
 - Premium pricing with highest comfort level
 - Typical range: $5000-15000 for long-haul
 - Usually 2-3x Business Class fares
 - Heavy focus on service and exclusivity",
 
-                "J" => @"Business Class Pricing:
+                "J" => @"Business Class Guidelines:
 - Premium pricing for business travelers
 - Typical range: $2500-8000 for long-haul
 - Usually 2-4x Economy fares
 - Focus on comfort and service",
 
-                "W" => @"Premium Economy Pricing:
+                "W" => @"Premium Economy Guidelines:
 - Mid-tier pricing between Economy and Business
 - Typical range: $1000-3000 for long-haul
 - Usually 1.5-2.5x Economy fares
 - Enhanced comfort over Economy",
 
-                "Y" => @"Economy Class Pricing:
+                "Y" => @"Economy Class Guidelines:
 - Base level pricing
 - Typical range: $500-2000 for long-haul
 - Competitive pricing essential
@@ -194,7 +209,6 @@ Ensure that:
         {
             return time.Hours switch
             {
-                // Early morning and late night flights get bigger discounts
                 >= 0 and < 6 => 20,
                 >= 21 => 15,
                 >= 13 and < 16 => 10,
@@ -213,9 +227,9 @@ Ensure that:
             };
         }
 
-        private string GenerateCacheKey(PricingRequestDto request, FlightRequestDto flight, string cabinClass)
+        private string GenerateCacheKey(PricingRequestDto request, FlightRequestDto flight)
         {
-            return $"{request.Origin}-{request.Destination}-{request.TravelDate:yyyyMMdd}-{flight.FlightNumber}-{cabinClass}";
+            return $"{request.Origin}-{request.Destination}-{request.TravelDate:yyyyMMdd}-{flight.FlightNumber}";
         }
     }
 }
