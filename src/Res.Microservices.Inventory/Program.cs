@@ -1,5 +1,4 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Abstractions;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -31,23 +30,18 @@ public class Program
                 services.AddScoped<IFlightRepository, FlightRepository>();
                 services.AddScoped<IInventoryService, InventoryService>();
 
-                // Add OpenAPI configuration
+                // Add minimal OpenAPI configuration for swagger.json only
                 services.AddSingleton<IOpenApiConfigurationOptions>(_ =>
-                    new OpenApiConfigurationOptions
+                    new DefaultOpenApiConfigurationOptions
                     {
                         Info = new OpenApiInfo
                         {
                             Version = "1.0",
                             Title = "Inventory API",
                             Description = "API for managing flight inventory and seat allocations"
-                        },
-                        Servers = new List<OpenApiServer>
-                        {
-                            new OpenApiServer { Url = "http://localhost:7044" }
                         }
                     });
             })
-            .ConfigureOpenApi()   
             .Build();
 
         await host.RunAsync();
