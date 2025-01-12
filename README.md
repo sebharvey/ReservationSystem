@@ -39,15 +39,13 @@ graph TD
         Console[Console App]
     end
 
-    %% API Gateway Layer
-    subgraph API_Gateway[API Gateway]
-        subgraph Retail_APIs[Retail APIs]
-            Offer[Res.Api.Offer]
-            Order[Res.Api.Order]
-        end
-        subgraph Ops_APIs[Operations APIs]
-            Command[Res.Api.Command]
-        end
+    %% API Layer
+    subgraph Retail_APIs[Retail APIs]
+        Offer[Res.Api.Offer]
+        Order[Res.Api.Order]
+    end
+    subgraph Ops_APIs[Operations APIs]
+        Command[Res.Api.Command]
     end
 
     %% Microservices Layer
