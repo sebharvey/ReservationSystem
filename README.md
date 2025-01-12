@@ -31,12 +31,15 @@ graph TD
     Customer1[👤 Customer]
     Customer2[👤 Customer]
     Staff[👥 Airport Staff]
+    OTA[👥 OTAs]
+    Airlines[✈️ Other Airlines]
 
     %% Consumers Layer
     subgraph Consumers
         Web[Website]
         Mobile[Mobile App]
         Console[Console App]
+        NDC[NDC]
     end
 
     %% API Layer
@@ -46,6 +49,7 @@ graph TD
     end
     subgraph Ops_APIs[Operations APIs]
         Command[Res.Api.Command]
+        Interlining[Res.Api.Interlining]
     end
 
     %% Microservices Layer
@@ -53,6 +57,7 @@ graph TD
         Inventory[Res.Microservices.Inventory]
         Reservation[Res.Microservices.Reservation]
         Fares[Res.Microservices.Fares]
+        Customer[Res.Microservices.Customer]
     end
 
     %% Event Bus
@@ -61,12 +66,15 @@ graph TD
     %% Databases and External Services
     DB1[(Inventory DB)]
     DB2[(Reservation DB)]
+    DB3[(Customer DB)]
     AI[AI Pricing Engine]
 
     %% User to Consumer connections
     Customer1 --> Web
     Customer2 --> Mobile
     Staff --> Console
+    OTA --> NDC
+    Airlines --> Interlining
 
     %% Consumer to API connections
     Web --> Offer
@@ -74,6 +82,8 @@ graph TD
     Mobile --> Offer
     Mobile --> Order
     Console --> Command
+    NDC --> Offer
+    NDC --> Order
 
     %% API to Microservice connections
     Offer --> Inventory
@@ -81,13 +91,18 @@ graph TD
     Order --> Inventory
     Order --> Reservation
     Order --> Fares
+    Order --> Customer
     Command --> Inventory
     Command --> Reservation
     Command --> Fares
+    Interlining --> Inventory
+    Interlining --> Reservation
+    Interlining --> Fares
 
     %% Microservice to Database/External connections
     Inventory --> DB1
     Reservation --> DB2
+    Customer --> DB3
     Fares --> AI
 
     %% Event publishing
@@ -103,12 +118,12 @@ graph TD
     classDef external fill:#f1f8e9,stroke:#33691e,color:black
     classDef eventbus fill:#ffebee,stroke:#b71c1c,color:black
 
-    class Customer1,Customer2,Staff user
-    class Web,Mobile,Console consumer
-    class Offer,Command,Order api
+    class Customer1,Customer2,Staff,OTA,Airlines user
+    class Web,Mobile,Console,NDC consumer
+    class Offer,Command,Order,Interlining api
     class Retail_APIs,Ops_APIs apiGroup
-    class Inventory,Reservation,Fares microservice
-    class DB1,DB2 database
+    class Inventory,Reservation,Fares,Customer microservice
+    class DB1,DB2,DB3 database
     class AI external
     class EventBus eventbus
 ```
