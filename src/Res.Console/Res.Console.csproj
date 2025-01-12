@@ -10,7 +10,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Res.Application\Res.Application.csproj" />
         <ProjectReference Include="..\Res.Core\Res.Core.csproj" />
-        <ProjectReference Include="..\Res.Tests.Data\Res.Tests.Data.csproj" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
