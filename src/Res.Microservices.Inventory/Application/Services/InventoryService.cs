@@ -1,10 +1,7 @@
-﻿using System.Text.Json;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Res.Microservices.Inventory.Application.DTOs;
 using Res.Microservices.Inventory.Application.Importer;
 using Res.Microservices.Inventory.Application.Interfaces;
-using Res.Microservices.Inventory.Domain.Entities;
-using Res.Microservices.Inventory.Infrastructure.Models;
 using Res.Microservices.Inventory.Infrastructure.Repositories;
 
 namespace Res.Microservices.Inventory.Application.Services
