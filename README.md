@@ -1,4 +1,4 @@
-# Airline Reservation System
+﻿# Airline Reservation System
 
 A comprehensive airline reservation system that provides both a traditional cryptic command interface (similar to Amadeus/Sabre) and a modern REST API. The system handles flight bookings, check-in, seat assignments, fare management, and more.
 
@@ -28,10 +28,9 @@ The industry's transition to OMS began around 2015 with initial NDC (New Distrib
 ```mermaid
 graph TD
     %% Users
-    subgraph Users
-        Customers[Customers]
-        AirportStaff[Airport Staff]
-    end
+    Customer1[👤 Customer]
+    Customer2[👤 Customer]
+    Staff[👥 Airport Staff]
 
     %% Consumers Layer
     subgraph Consumers
@@ -42,9 +41,13 @@ graph TD
 
     %% API Gateway Layer
     subgraph API_Gateway[API Gateway]
-        Offer[Res.Api.Offer]
-        Command[Res.Api.Command]
-        Order[Res.Api.Order]
+        subgraph Retail_APIs[Retail APIs]
+            Offer[Res.Api.Offer]
+            Order[Res.Api.Order]
+        end
+        subgraph Ops_APIs[Operations APIs]
+            Command[Res.Api.Command]
+        end
     end
 
     %% Microservices Layer
@@ -63,9 +66,9 @@ graph TD
     AI[AI Pricing Engine]
 
     %% User to Consumer connections
-    Customers --> Web
-    Customers --> Mobile
-    AirportStaff --> Console
+    Customer1 --> Web
+    Customer2 --> Mobile
+    Staff --> Console
 
     %% Consumer to API connections
     Web --> Offer
@@ -92,18 +95,20 @@ graph TD
     %% Event publishing
     Reservation --> EventBus
 
-    %% Styling
-    classDef user fill:#e8f5e9,stroke:#2e7d32
-    classDef consumer fill:#e1f5fe,stroke:#01579b
-    classDef api fill:#fff3e0,stroke:#ff6f00
-    classDef microservice fill:#f3e5f5,stroke:#4a148c
-    classDef database fill:#fafafa,stroke:#212121
-    classDef external fill:#f1f8e9,stroke:#33691e
-    classDef eventbus fill:#ffebee,stroke:#b71c1c
+    %% Styling with black text
+    classDef user fill:#e8f5e9,stroke:#2e7d32,color:black
+    classDef consumer fill:#e1f5fe,stroke:#01579b,color:black
+    classDef api fill:#fff3e0,stroke:#ff6f00,color:black
+    classDef apiGroup fill:#fff8e1,stroke:#ffa000,color:black
+    classDef microservice fill:#f3e5f5,stroke:#4a148c,color:black
+    classDef database fill:#fafafa,stroke:#212121,color:black
+    classDef external fill:#f1f8e9,stroke:#33691e,color:black
+    classDef eventbus fill:#ffebee,stroke:#b71c1c,color:black
 
-    class Customers,AirportStaff user
+    class Customer1,Customer2,Staff user
     class Web,Mobile,Console consumer
     class Offer,Command,Order api
+    class Retail_APIs,Ops_APIs apiGroup
     class Inventory,Reservation,Fares microservice
     class DB1,DB2 database
     class AI external
