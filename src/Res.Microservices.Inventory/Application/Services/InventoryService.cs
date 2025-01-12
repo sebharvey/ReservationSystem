@@ -24,15 +24,10 @@ namespace Res.Microservices.Inventory.Application.Services
         {
             try
             {
-                var flights = await _flightRepository.SearchFlights(
-                    request.DepartureDate,
-                    request.Origin,
-                    request.Destination
-                );
+                var flights = await _flightRepository.SearchFlights(request.DepartureDate, request.Origin, request.Destination);
 
                 return flights.Select(flight =>
                 {
-                   // var cabinSeats = JsonSerializer.Deserialize<List<CabinSeats>>(flight.Seats);
                     var arrivalOffset = (flight.Arrival.Date - flight.Departure.Date).Days;
 
                     return new FlightSearchResponse
@@ -44,11 +39,11 @@ namespace Res.Microservices.Inventory.Application.Services
                         Arrival = flight.Arrival,
                         ArrivalOffset = arrivalOffset,
                         Aircraft = flight.AircraftType,
-                        //Availability = cabinSeats.Select(cs => new FlightSearchResponse.CabinAvailability
-                        //{
-                        //    Cabin = cs.Cabin,
-                        //    Remaining = cs.Seats
-                        //}).ToList()
+                        Availability = flight.Seats.Select(cs => new FlightSearchResponse.CabinAvailability
+                        {
+                            Cabin = cs.Key,
+                            Remaining = cs.Value
+                        }).ToList()
                     };
                 }).ToList();
             }
