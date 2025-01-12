@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Res.Api.Order": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7032",
+      "launchBrowser": false
+    }
+  }
+}

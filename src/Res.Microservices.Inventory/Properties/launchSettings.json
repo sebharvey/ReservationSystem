@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Res.Microservices.Inventory": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7044",
+      "launchBrowser": false
+    }
+  }
+}
