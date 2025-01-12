@@ -121,7 +121,7 @@ graph TD
     class Customer1,Customer2,Staff,OTA,Airlines user
     class Web,Mobile,Console,NDC consumer
     class Offer,Command,Order,Interlining api
-    class Retail_APIs,Ops_APIs,Microservices 
+    class Retail_APIs,Ops_APIs,Microservices serviceGroup
     class Inventory,Reservation,Fares,Customer microservice
     class DB1,DB2,DB3 database
     class AI external
