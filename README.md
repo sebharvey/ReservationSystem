@@ -30,7 +30,7 @@ graph TD
     %% Users
     Customer1[👤 Customer]
     Customer2[👤 Customer]
-    Staff[👥 Airport Staff]
+    Staff[👥 Airline Staff]
     OTA[👥 OTAs]
     Airlines[✈️ Other Airlines]
 
@@ -112,8 +112,9 @@ graph TD
     classDef user fill:#e8f5e9,stroke:#2e7d32,color:black
     classDef consumer fill:#e1f5fe,stroke:#01579b,color:black
     classDef api fill:#fff3e0,stroke:#ff6f00,color:black
-    classDef apiGroup fill:#fff8e1,stroke:#ffa000,color:black
-    classDef microservice fill:#f3e5f5,stroke:#4a148c,color:black
+    classDef apiGroup fill:#f3e5f5,stroke:#4a148c,color:black
+    classDef microservice fill:#fff3e0,stroke:#ff6f00,color:black
+    classDef serviceGroup fill:#e1f5fe,stroke:#01579b,color:black
     classDef database fill:#fafafa,stroke:#212121,color:black
     classDef external fill:#f1f8e9,stroke:#33691e,color:black
     classDef eventbus fill:#ffebee,stroke:#b71c1c,color:black
@@ -121,7 +122,7 @@ graph TD
     class Customer1,Customer2,Staff,OTA,Airlines user
     class Web,Mobile,Console,NDC consumer
     class Offer,Command,Order,Interlining api
-    class Retail_APIs,Ops_APIs apiGroup
+    class Retail_APIs,Ops_APIs,Microservices serviceGroup
     class Inventory,Reservation,Fares,Customer microservice
     class DB1,DB2,DB3 database
     class AI external
