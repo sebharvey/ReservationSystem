@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Res.Microservices.Inventory.Application.DTOs;
 using Res.Microservices.Inventory.Application.Interfaces;
@@ -26,9 +27,10 @@ namespace Res.Microservices.Inventory.API.Controllers
         }
 
         [Function("SearchFlights")]
-        public async Task<HttpResponseData> SearchFlights(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "inventory/flights/search")]
-            HttpRequestData req)
+        [OpenApiOperation(operationId: "SearchFlights", tags: new[] { "Flights" })]
+        [OpenApiRequestBody("application/json", typeof(FlightSearchRequest))]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(List<FlightSearchResponse>))]
+        public async Task<HttpResponseData> SearchFlights([HttpTrigger(AuthorizationLevel.Function, "post", Route = "inventory/flights/search")] HttpRequestData req)
         {
             _logger.LogInformation("Processing flight search request");
 
@@ -64,9 +66,10 @@ namespace Res.Microservices.Inventory.API.Controllers
         }
 
         [Function("ImportSchedule")]
-        public async Task<HttpResponseData> ImportSchedule(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "inventory/flights/import")]
-            HttpRequestData req)
+        [OpenApiOperation(operationId: "ImportSchedule", tags: new[] { "Flights" })]
+        [OpenApiRequestBody("application/json", typeof(ImportScheduleRequest))]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(void))]
+        public async Task<HttpResponseData> ImportSchedule([HttpTrigger(AuthorizationLevel.Function, "post", Route = "inventory/flights/import")] HttpRequestData req)
         {
             _logger.LogInformation("Processing schedule import request");
 

@@ -1,52 +1,55 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Extensions.OpenApi.Extensions;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Abstractions;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Configurations;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 using Res.Microservices.Inventory.Application.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Res.Microservices.Inventory.Application.Services;
 using Res.Microservices.Inventory.Infrastructure.Data;
 using Res.Microservices.Inventory.Infrastructure.Repositories;
 
-namespace Res.Microservices.Inventory
+public class Program
 {
-    public class Program
+    static async Task Main(string[] args)
     {
-        static async Task Main(string[] args)
-        {
-            var host = new HostBuilder()
-                .ConfigureLogging((context, logging) =>
-                {
-                    logging.ClearProviders(); // Remove all default providers including Console
-                    logging.AddDebug(); // Add only Debug provider
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                })
-                .ConfigureAppConfiguration(configurationBuilder =>
-                {
-                    configurationBuilder.AddCommandLine(args)
+        var host = new HostBuilder()
+            .ConfigureFunctionsWebApplication()
+            .ConfigureServices((context, services) =>
+            {
+                services.AddDbContext<InventoryDbContext>(options =>
+                    options.UseSqlServer(context.Configuration.GetConnectionString("DefaultConnection")));
 
-                        .SetBasePath(System.Environment.CurrentDirectory)
-                        .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                        .AddEnvironmentVariables()
-                        .Build();
-                })
-                .ConfigureFunctionsWebApplication()
-                .ConfigureServices((context, services) =>
-                {
-                    services.AddDbContext<InventoryDbContext>(options => options.UseSqlServer(context.Configuration.GetConnectionString("DefaultConnection")));
+                services.AddMemoryCache();
+                services.AddApplicationInsightsTelemetryWorkerService();
+                services.ConfigureFunctionsApplicationInsights();
+                services.AddHttpClient();
 
-                    services.AddMemoryCache();
-                    services.AddApplicationInsightsTelemetryWorkerService();
-                    services.ConfigureFunctionsApplicationInsights();
-                    services.AddHttpClient();
+                services.AddScoped<IFlightRepository, FlightRepository>();
+                services.AddScoped<IInventoryService, InventoryService>();
 
-                    services.AddScoped<IFlightRepository, FlightRepository>();
-                    services.AddScoped<IInventoryService, InventoryService>();
-                })
-                .Build();
+                // Add OpenAPI configuration
+                services.AddSingleton<IOpenApiConfigurationOptions>(_ =>
+                    new OpenApiConfigurationOptions
+                    {
+                        Info = new OpenApiInfo
+                        {
+                            Version = "1.0",
+                            Title = "Inventory API",
+                            Description = "API for managing flight inventory and seat allocations"
+                        },
+                        Servers = new List<OpenApiServer>
+                        {
+                            new OpenApiServer { Url = "http://localhost:7044" }
+                        }
+                    });
+            })
+            .ConfigureOpenApi()   
+            .Build();
 
-            host.Run();
-        }
+        await host.RunAsync();
     }
 }
