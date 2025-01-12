@@ -26,79 +26,88 @@ The industry's transition to OMS began around 2015 with initial NDC (New Distrib
 ## Architecture Overview
 
 ```mermaid
-graph TB
-    subgraph "Client Layer"
-        CLI[Command Line Interface]
-        REST[REST API Clients]
+graph TD
+    %% Users
+    subgraph Users
+        Customers[Customers]
+        AirportStaff[Airport Staff]
     end
 
-    subgraph "API Layer"
-        CMD[Command Controller]
-        OFR[Offer Controller]
-        ORD[Order Controller]
-        CHK[Check-in Controller]
-        SEAT[Seat Controller]
+    %% Consumers Layer
+    subgraph Consumers
+        Web[Website]
+        Mobile[Mobile App]
+        Console[Console App]
     end
 
-    subgraph "Application Layer"
-        RS[Reservation System]
-        RC[Reservation Commands]
-        PNR[PNR Service]
-        INV[Inventory Service]
-        FARE[Fare Service]
-        TKT[Ticketing Service]
-        SEAT_SVC[Seat Service]
-        CHK_SVC[Check-in Service]
+    %% API Gateway Layer
+    subgraph API_Gateway[API Gateway]
+        Offer[Res.Api.Offer]
+        Command[Res.Api.Command]
+        Order[Res.Api.Order]
     end
 
-    subgraph "Domain Layer"
-        PNR_ENT[PNR]
-        INV_ENT[Inventory]
-        FARE_ENT[Fares]
-        TKT_ENT[Tickets]
-        SEAT_ENT[Seat Maps]
+    %% Microservices Layer
+    subgraph Microservices
+        Inventory[Res.Microservices.Inventory]
+        Reservation[Res.Microservices.Reservation]
+        Fares[Res.Microservices.Fares]
     end
 
-    subgraph "Infrastructure Layer"
-        PNR_REPO[PNR Repository]
-        INV_REPO[Inventory Repository]
-        FARE_REPO[Fare Repository]
-        AUTH[Authentication]
-        PAY[Payment Service]
-        APIS[APIS Service]
-    end
+    %% Event Bus
+    EventBus[Event Bus]
 
-    %% Client to API connections
-    CLI --> CMD
-    REST --> OFR & ORD & CHK & SEAT
+    %% Databases and External Services
+    DB1[(Inventory DB)]
+    DB2[(Reservation DB)]
+    AI[AI Pricing Engine]
 
-    %% API to Application connections
-    CMD --> RS
-    OFR --> RS
-    ORD --> RS
-    CHK --> CHK_SVC
-    SEAT --> SEAT_SVC
+    %% User to Consumer connections
+    Customers --> Web
+    Customers --> Mobile
+    AirportStaff --> Console
 
-    %% Application interconnections
-    RS --> RC
-    RC --> PNR & INV & FARE & TKT & SEAT_SVC & CHK_SVC
+    %% Consumer to API connections
+    Web --> Offer
+    Web --> Order
+    Mobile --> Offer
+    Mobile --> Order
+    Console --> Command
 
-    %% Application to Domain connections
-    PNR --> PNR_ENT
-    INV --> INV_ENT
-    FARE --> FARE_ENT
-    TKT --> TKT_ENT
-    SEAT_SVC --> SEAT_ENT
+    %% API to Microservice connections
+    Offer --> Inventory
+    Offer --> Fares
+    Order --> Inventory
+    Order --> Reservation
+    Order --> Fares
+    Command --> Inventory
+    Command --> Reservation
+    Command --> Fares
 
-    %% Domain to Infrastructure connections
-    PNR_ENT --> PNR_REPO
-    INV_ENT --> INV_REPO
-    FARE_ENT --> FARE_REPO
-    
-    %% External service connections
-    RC -.-> AUTH
-    RC -.-> PAY
-    CHK_SVC -.-> APIS
+    %% Microservice to Database/External connections
+    Inventory --> DB1
+    Reservation --> DB2
+    Fares --> AI
+
+    %% Event publishing
+    Reservation --> EventBus
+
+    %% Styling
+    classDef user fill:#e8f5e9,stroke:#2e7d32
+    classDef consumer fill:#e1f5fe,stroke:#01579b
+    classDef api fill:#fff3e0,stroke:#ff6f00
+    classDef microservice fill:#f3e5f5,stroke:#4a148c
+    classDef database fill:#fafafa,stroke:#212121
+    classDef external fill:#f1f8e9,stroke:#33691e
+    classDef eventbus fill:#ffebee,stroke:#b71c1c
+
+    class Customers,AirportStaff user
+    class Web,Mobile,Console consumer
+    class Offer,Command,Order api
+    class Inventory,Reservation,Fares microservice
+    class DB1,DB2 database
+    class AI external
+    class EventBus eventbus
 ```
 
 The system follows a layered architecture pattern:
