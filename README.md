@@ -114,7 +114,6 @@ graph TD
     classDef api fill:#fff3e0,stroke:#ff6f00,color:black
     classDef apiGroup fill:#f3e5f5,stroke:#4a148c,color:black
     classDef microservice fill:#fff3e0,stroke:#ff6f00,color:black
-    classDef serviceGroup fill:#e1f5fe,stroke:#01579b,color:black
     classDef database fill:#fafafa,stroke:#212121,color:black
     classDef external fill:#f1f8e9,stroke:#33691e,color:black
     classDef eventbus fill:#ffebee,stroke:#b71c1c,color:black
@@ -122,7 +121,7 @@ graph TD
     class Customer1,Customer2,Staff,OTA,Airlines user
     class Web,Mobile,Console,NDC consumer
     class Offer,Command,Order,Interlining api
-    class Retail_APIs,Ops_APIs,Microservices serviceGroup
+    class Retail_APIs,Ops_APIs,Microservices 
     class Inventory,Reservation,Fares,Customer microservice
     class DB1,DB2,DB3 database
     class AI external
