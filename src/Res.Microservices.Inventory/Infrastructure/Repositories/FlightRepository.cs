@@ -358,5 +358,45 @@ namespace Res.Microservices.Inventory.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<int> DeleteOldFlights(DateTime cutoffDate)
+        {
+            try
+            {
+                // Start a transaction
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // First, delete associated allocations
+                    var deletedAllocations = await _context.Allocations
+                        .Where(a => a.Flight.Departure < cutoffDate)
+                        .ExecuteDeleteAsync();
+
+                    _logger.LogInformation("Deleted {count} old allocation records", deletedAllocations);
+
+                    // Then delete the flights
+                    var deletedFlights = await _context.Flights
+                        .Where(f => f.Departure < cutoffDate)
+                        .ExecuteDeleteAsync();
+
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Deleted {count} old flight records", deletedFlights);
+
+                    return deletedFlights;
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting old flights before {cutoffDate}", cutoffDate);
+                throw;
+            }
+        }
     }
 }

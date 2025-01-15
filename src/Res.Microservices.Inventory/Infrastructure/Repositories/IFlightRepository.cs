@@ -11,5 +11,6 @@ namespace Res.Microservices.Inventory.Infrastructure.Repositories
         Task<bool> AllocateSeat(SeatAllocationRequest request);
         Task<List<AllocationResponse>> GetSeatMap(string flightNo, DateTime departureDate);
         Task ImportAircraftConfig(List<AircraftConfig> aircraftConfigs);
+        Task<int> DeleteOldFlights(DateTime cutoffDate);
     }
 }
