@@ -79,8 +79,10 @@ graph TD
     %% Consumer to API connections
     Web --> Offer
     Web --> Order
+    Web --> Delivery
     Mobile --> Offer
     Mobile --> Order
+    Mobile --> Delivery
     Console --> Command
     NDC --> Offer
     NDC --> Order
@@ -92,6 +94,8 @@ graph TD
     Order --> Reservation
     Order --> Fares
     Order --> Customer
+    Delivery --> Inventory
+    Delivery --> Reservation
     Command --> Inventory
     Command --> Reservation
     Command --> Fares
@@ -120,7 +124,7 @@ graph TD
 
     class Customer1,Customer2,Staff,OTA,Airlines user
     class Web,Mobile,Console,NDC consumer
-    class Offer,Command,Order,Interlining api
+    class Offer,Command,Order,Interlining api,Delivery
     class Retail_APIs,Ops_APIs,Microservices serviceGroup
     class Inventory,Reservation,Fares,Customer microservice
     class DB1,DB2,DB3 database
