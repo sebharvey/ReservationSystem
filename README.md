@@ -46,6 +46,7 @@ graph TD
     subgraph Retail_APIs[Retail APIs]
         Offer[Res.Api.Offer]
         Order[Res.Api.Order]
+        Delivery[Res.Api.Delivery]
     end
     subgraph Ops_APIs[Operations APIs]
         Command[Res.Api.Command]
