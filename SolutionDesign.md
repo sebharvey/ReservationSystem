@@ -348,5 +348,102 @@ sequenceDiagram
         Web/Mobile-->>Customer: Display email sent confirmation
     end
 ```
+## IATA One Order Example Schema
 
+```
+{
+  "OrderID": "A1B2C3D4E5",
+  "OrderStatus": "CONFIRMED",
+  "OrderCreateDate": "2025-03-15T14:30:00Z",
+  "Customer": {
+    "CustomerID": "CUST123456",
+    "GivenName": "Jane",
+    "Surname": "Smith",
+    "ContactInformation": {
+      "EmailAddress": "jane.smith@example.com",
+      "Phone": "+1-555-123-4567"
+    },
+    "LoyaltyProgram": {
+      "ProgramName": "SkyMiles",
+      "AccountNumber": "SM987654321",
+      "Status": "Gold"
+    }
+  },
+  "OrderItems": [
+    {
+      "OrderItemID": "OI-001",
+      "ItemStatus": "CONFIRMED",
+      "FlightItem": {
+        "SegmentID": "SEG001",
+        "Origin": "JFK",
+        "Destination": "LHR",
+        "DepartureDate": "2025-04-10T18:30:00Z",
+        "ArrivalDate": "2025-04-11T07:15:00Z",
+        "FlightNumber": "BA178",
+        "CarrierCode": "BA",
+        "ServiceClass": "J",
+        "Seat": "12A",
+        "Baggage": {
+          "CheckedAllowance": "2PC",
+          "CabinAllowance": "1PC"
+        }
+      }
+    },
+    {
+      "OrderItemID": "OI-002",
+      "ItemStatus": "CONFIRMED",
+      "ServiceItem": {
+        "ServiceID": "SRV001",
+        "ServiceType": "MEAL",
+        "ServiceDescription": "Special Meal - Vegetarian",
+        "FlightReference": "SEG001"
+      }
+    },
+    {
+      "OrderItemID": "OI-003",
+      "ItemStatus": "CONFIRMED",
+      "ServiceItem": {
+        "ServiceID": "SRV002",
+        "ServiceType": "LOUNGE",
+        "ServiceDescription": "Airport Lounge Access",
+        "LocationCode": "JFK",
+        "ValidityPeriod": {
+          "StartDate": "2025-04-10T14:30:00Z",
+          "EndDate": "2025-04-10T18:30:00Z"
+        }
+      }
+    }
+  ],
+  "Payment": {
+    "PaymentID": "PAY001",
+    "PaymentMethod": "CreditCard",
+    "PaymentStatus": "COMPLETED",
+    "PaymentAmount": {
+      "Amount": "1250.00",
+      "CurrencyCode": "USD"
+    },
+    "PaymentDate": "2025-03-15T14:32:15Z"
+  },
+  "ServicingHistory": [
+    {
+      "EventID": "SRV-001",
+      "EventType": "ORDER_CREATION",
+      "EventTimestamp": "2025-03-15T14:30:00Z",
+      "Agent": {
+        "AgentID": "AGENT007",
+        "AgentType": "SYSTEM"
+      }
+    },
+    {
+      "EventID": "SRV-002",
+      "EventType": "SEAT_SELECTION",
+      "EventTimestamp": "2025-03-15T14:35:22Z",
+      "Agent": {
+        "AgentID": "CUST123456",
+        "AgentType": "CUSTOMER"
+      }
+    }
+  ]
+}
+```
 
