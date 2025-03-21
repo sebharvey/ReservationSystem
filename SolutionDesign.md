@@ -350,7 +350,7 @@ sequenceDiagram
 ```
 ## IATA One Order Example Schema
 
-```
+```json
 {
   "OrderID": "A1B2C3D4E5",
   "OrderStatus": "CONFIRMED",
